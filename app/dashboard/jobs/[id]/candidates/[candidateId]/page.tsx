@@ -6,6 +6,7 @@ import { getJobById } from "@/lib/jobs";
 import { getCandidateWithScore } from "@/lib/candidates";
 import { EvidenceView } from "@/components/candidates/evidence-view";
 import { StartInterviewButton } from "@/components/interview/start-interview-button";
+import { InterviewPanel } from "@/components/interview/interview-panel";
 
 type Params = Promise<{ id: string; candidateId: string }>;
 
@@ -56,6 +57,7 @@ async function CandidateEvidence({ params }: { params: Params }) {
             <StartInterviewButton candidateId={candidate.id} />
           </section>
           <EvidenceView requirements={job.requirements} candidate={candidate} score={score} />
+          <InterviewPanel candidateId={candidate.id} />
         </>
       ) : (
         <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
