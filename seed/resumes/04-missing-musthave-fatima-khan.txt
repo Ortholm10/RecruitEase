@@ -1,0 +1,43 @@
+Fatima Khan
+Hyderabad, India | fatima.khan.dev@gmail.com | +91 90123 45678
+github.com/fkhan-dev | portfolio: fatimakhan.dev
+
+SUMMARY
+Frontend-focused full stack engineer with 5 years of experience, specializing
+in React and serverless architectures. Strong believer in fast iteration and
+NoSQL-first data modeling for product teams that need to move quickly.
+
+EXPERIENCE
+
+Senior Frontend Engineer — Lumenwave Studio (2021 - Present)
+- Rebuilt the core product UI in React with a component library used
+  across 5 internal products, reducing new-feature build time by ~30%.
+- Built serverless backend functions (Node.js on Firebase Cloud Functions)
+  for authentication, notifications, and file processing.
+- Designed the Firestore (NoSQL) data model for our multi-tenant app,
+  including security rules for tenant isolation.
+- Integrated Stripe and Twilio via REST APIs for billing and SMS
+  notifications.
+- Wrote Cypress end-to-end tests covering the top 10 user flows; these
+  tests now run in CI on every pull request.
+- Regularly presented UI/UX proposals to design and product leadership,
+  and wrote the frontend architecture doc adopted team-wide.
+
+Frontend Developer — Solstice Apps (2019 - 2021)
+- Built React Native and React web apps sharing a common component layer.
+- Used Firebase Realtime Database and Firestore exclusively for all data
+  storage needs across three shipped apps.
+- Deployed frontend apps via Vercel and Firebase Hosting with automatic
+  preview deployments per pull request.
+
+EDUCATION
+B.Tech Computer Science, Osmania University (2015 - 2019)
+
+SKILLS
+React, React Native, TypeScript, Node.js, Firebase (Firestore, Auth, Cloud
+Functions, Hosting), Cypress, Jest, REST APIs, Vercel, CI/CD (GitHub
+Actions), UI/UX design collaboration, technical writing
+
+Note: All professional experience uses Firebase/Firestore (NoSQL) for data
+storage — no direct production experience with SQL or relational database
+schema design.

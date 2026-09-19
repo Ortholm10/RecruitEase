@@ -1,0 +1,305 @@
+// ============================================================
+// RecruitEase — Shared Contract
+// ============================================================
+// Every object that crosses the wire between Person A (backend/AI/data)
+// and Person B (frontend/product/UI) is defined here, and ONLY here.
+//
+// Rules:
+//   1. Do not redefine these shapes in a component or an API route.
+//      Import from this file.
+//   2. If a shape needs to change, change it here first, message the
+//      other person, then update call sites. Never let the two of you
+//      drift onto slightly different versions of "Score".
+//   3. This file has zero runtime dependencies (no Zod, no Supabase
+//      client). Person A can layer Zod schemas that validate INTO
+//      these types in a separate file (e.g. types/schemas.ts).
+// ============================================================
+
+// ------------------------------------------------------------
+// Enums / literal unions
+// ------------------------------------------------------------
+
+export type UserRole = "recruiter" | "candidate";
+
+export type RequirementLevel = "junior" | "mid" | "senior" | "any";
+
+/** The four-point verdict scale used for BOTH resume scoring and
+ *  interview answer grading, so a candidate's report can show movement
+ *  ("Unproven on paper, Strong after interview"). */
+export type Verdict = "strong" | "partial" | "unproven" | "absent";
+
+export const VERDICT_POINTS: Record<Verdict, number> = {
+  strong: 1.0,
+  partial: 0.5,
+  unproven: 0.25,
+  absent: 0,
+};
+
+export type QuestionType =
+  | "resume_probe" // 2x — grounded in something the candidate already claimed
+  | "gap_probe" // 2x — targets a Partial/Unproven requirement from scoring
+  | "artifact" // 1x — on-screen code/diagram question (copilot is blind to it)
+  | "rapid_fire" // 2-3x — 20s timer, defeats round-trip-latency copilots
+  | "follow_up"; // adaptive, hard-capped at 2 per parent question
+
+export type InterviewStatus =
+  | "not_started"
+  | "in_progress"
+  | "completed"
+  | "abandoned";
+
+export type IntegrityEventType =
+  | "latency_variance" // Tier 1 — consistent 3-5s delay regardless of difficulty
+  | "tab_blur" // Tier 1
+  | "fullscreen_exit" // Tier 1
+  | "paste_event" // Tier 1
+  | "window_focus_loss" // Tier 1
+  | "canary_triggered" // Tier 3 — invisible on-screen text read back by a screen-reading tool
+  | "gaze_sweep"; // Tier 2 — MediaPipe, last to build, first to cut
+
+export type IntegrityRiskLevel = "low" | "medium" | "high";
+
+export type ReportOutcome = "advance" | "reject" | "pending";
+
+export type DraftStatus = "draft" | "approved" | "sent";
+
+// ------------------------------------------------------------
+// Job & Requirements   (table: jobs)
+// ------------------------------------------------------------
+
+export interface Requirement {
+  id: string; // stable slug, e.g. "req_react_senior"
+  skill: string; // "React", "System design", "PostgreSQL"
+  level: RequirementLevel;
+  mustHave: boolean;
+  weight: number; // 0-1, all requirements for a job sum to 1
+  rawText: string; // the JD sentence/clause this was parsed from
+}
+
+export interface Job {
+  id: string;
+  recruiterId: string;
+  title: string;
+  jdText: string;
+  requirements: Requirement[];
+  createdAt: string; // ISO 8601
+}
+
+// ------------------------------------------------------------
+// Candidate & Extraction   (tables: candidates, extractions)
+// ------------------------------------------------------------
+
+/** A quote pulled from resume_text, with the character offsets that let
+ *  the UI highlight it in place. If findQuote() can't locate the exact
+ *  string in resume_text, grounded=false and offsets are null — the UI
+ *  must render this differently (e.g. a warning icon), never silently
+ *  drop it. */
+export interface Evidence {
+  quote: string;
+  startOffset: number | null;
+  endOffset: number | null;
+  grounded: boolean;
+}
+
+export interface ExtractedField {
+  key: string; // "skill:React" | "experience:years" | "education" | ...
+  value: string;
+  evidence: Evidence;
+}
+
+export interface Candidate {
+  id: string;
+  jobId: string;
+  name: string;
+  email: string;
+  resumePath: string; // Supabase storage object path
+  resumeText: string; // extracted plain text (PDF.js output)
+  createdAt: string;
+}
+
+export interface Extraction {
+  id: string;
+  candidateId: string;
+  fields: ExtractedField[];
+  modelVersion: string;
+  createdAt: string;
+}
+
+// ------------------------------------------------------------
+// Scoring   (table: scores)
+// ------------------------------------------------------------
+
+export interface RequirementScore {
+  requirementId: string;
+  verdict: Verdict;
+  points: number; // VERDICT_POINTS[verdict], stored redundantly for easy SQL aggregation
+  evidence: Evidence | null; // null only when verdict === "absent"
+  reasoning: string; // one-line model justification, shown on hover
+}
+
+export interface Score {
+  id: string;
+  candidateId: string;
+  jobId: string;
+  total: number; // 0-100, weighted sum normalized
+  breakdown: RequirementScore[];
+  /** requirementIds with verdict "partial" or "unproven" — this list IS
+   *  the input to the interview planner. Don't recompute it elsewhere. */
+  unproven: string[];
+  mustHaveGateFailed: boolean;
+  gateReason: string | null; // set iff mustHaveGateFailed
+  rubricVersion: string; // bump whenever weights/prompt change, for audit trail
+  createdAt: string;
+}
+
+// ------------------------------------------------------------
+// Interview   (tables: interviews, turns)
+// ------------------------------------------------------------
+
+export interface PlannedQuestion {
+  id: string;
+  type: QuestionType;
+  requirementId: string | null; // set for gap_probe; null for resume_probe/rapid_fire/artifact
+  prompt: string;
+  artifactPayload?: string; // code snippet / diagram markup — only for type "artifact"
+  timeLimitSeconds: number | null; // set for rapid_fire (e.g. 20)
+}
+
+/** Fixed composition per candidate so interviews are comparable:
+ *  2 resume_probe + 2 gap_probe + 1 artifact + 2-3 rapid_fire.
+ *  Generated once, stored, never mutated — follow_ups are separate Turns. */
+export interface InterviewPlan {
+  id: string;
+  candidateId: string;
+  jobId: string;
+  questions: PlannedQuestion[];
+  generatedAt: string;
+}
+
+export interface Interview {
+  id: string;
+  candidateId: string;
+  jobId: string;
+  plan: InterviewPlan; // stored as jsonb on the interviews row — see migration
+  status: InterviewStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface Turn {
+  id: string;
+  interviewId: string;
+  questionId: string; // references PlannedQuestion.id
+  questionType: QuestionType;
+  /** 0 = the original planned question. 1 or 2 = a follow-up.
+   *  MUST be enforced <= 2 in code, not just by convention. */
+  followUpDepth: number;
+  askedAt: string;
+  /** First registered token/word of the candidate's answer — the single
+   *  most important timestamp for the integrity layer's latency-variance
+   *  signal. Person B: this must fire accurately (see step B6). */
+  firstWordAt: string | null;
+  answeredAt: string | null;
+  transcript: string;
+  verdict: Verdict | null; // graded on the same 4-point scale as resume scoring
+  evidenceLinkedRequirement: string | null; // which requirement this turn was meant to prove/disprove
+}
+
+// ------------------------------------------------------------
+// Integrity   (table: integrity_events)
+// ------------------------------------------------------------
+
+export interface IntegrityEvent {
+  id: string;
+  interviewId: string;
+  turnId: string | null; // null for session-level events (tab_blur, fullscreen_exit)
+  type: IntegrityEventType;
+  payload: Record<string, unknown>; // e.g. { varianceMs: 120, meanDelayMs: 4200 }
+  ts: string;
+}
+
+/** Recruiter-facing ONLY. Never pass this type, or any IntegrityEvent,
+ *  into the feedback-report generator's context. See CandidateFeedbackReport. */
+export interface IntegritySummary {
+  interviewId: string;
+  riskLevel: IntegrityRiskLevel;
+  signals: IntegrityEvent[];
+}
+
+// ------------------------------------------------------------
+// Reports   (table: reports)
+// ------------------------------------------------------------
+
+export interface RecruiterReportSection {
+  requirementId: string;
+  resumeVerdict: Verdict;
+  interviewVerdict: Verdict | null; // null if this requirement wasn't probed
+  movement: string | null; // e.g. "Unproven on paper, Strong after interview"
+  evidence: Evidence[];
+}
+
+export interface RecruiterReport {
+  id: string;
+  candidateId: string;
+  jobId: string;
+  sections: RecruiterReportSection[];
+  integrity: IntegritySummary | null;
+  outcome: ReportOutcome;
+  createdAt: string;
+}
+
+/**
+ * The candidate-facing artifact. HARD RULES for whatever generates this:
+ *   1. Every claim must cite a stored Evidence item — no evidence, no sentence.
+ *   2. This type must NEVER carry integrity data. If you're about to add
+ *      an `integrity` field here, stop — that's the rule being broken.
+ *   3. Never state or imply a reason tied to a protected characteristic.
+ *      Enforce with a post-generation output check, not just prompt text.
+ * Recruiter reviews as `draft`, edits inline, sets `approved`, system
+ * sends and stamps `sent`. Every transition logged to AuditLogEntry.
+ */
+export interface CandidateFeedbackReport {
+  id: string;
+  candidateId: string;
+  jobId: string;
+  stagesCompleted: { stage: string; date: string }[];
+  interviewSummary: { question: string; answerSummary: string }[];
+  scoreBreakdown: {
+    requirementLabel: string;
+    verdict: Verdict;
+    evidenceQuote: string;
+  }[];
+  keyGaps: { requirementLabel: string; nextStep: string }[];
+  strengths: string[];
+  draftStatus: DraftStatus;
+  approvedBy: string | null; // recruiter's profile id
+  sentAt: string | null;
+}
+
+// ------------------------------------------------------------
+// Audit log   (table: audit_log)
+// ------------------------------------------------------------
+
+export interface AuditLogEntry {
+  id: string;
+  entity: "job" | "candidate" | "extraction" | "score" | "interview" | "turn" | "report";
+  entityId: string;
+  action: string; // "generated" | "approved" | "sent" | "overridden" | ...
+  actorId: string; // profile id, or "system"
+  model: string | null; // model name/version if AI-generated
+  promptVersion: string | null;
+  sourceRef: string | null; // evidence id / requirement id this action is grounded in
+  ts: string;
+}
+
+// ------------------------------------------------------------
+// Profile   (table: profiles)
+// ------------------------------------------------------------
+
+export interface UserProfile {
+  id: string; // matches auth.users.id
+  role: UserRole;
+  fullName: string;
+  email: string;
+  createdAt: string;
+}

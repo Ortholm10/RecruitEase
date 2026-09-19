@@ -1,0 +1,35 @@
+Arjun Mehta
+Pune, India | arjun.mehta19@outlook.com | 9876543211
+
+OBJECTIVE
+Full stack developer with 4 years experience looking for a role where I can
+grow into more backend and system design work.
+
+WORK EXPERIENCE
+
+Full Stack Developer, Bittercress Softwares Pvt Ltd (Jan 2021 - Present)
+- Developed multiple features for our SaaS dashboard using React and
+  Redux, including a reporting page used by ~200 customers.
+- Worked on backend APIs in Node.js for the dashboard, mostly CRUD
+  endpoints connected to our MongoDB database.
+- Used MySQL on one internal project to store user activity logs; wrote
+  basic SELECT and JOIN queries for a reporting script.
+- Fixed several bugs in our authentication flow and helped onboard two
+  new junior developers to the codebase.
+- Participated in sprint planning and daily standups; occasionally
+  presented feature demos to the product manager.
+
+Junior Developer, Codeframe Solutions (Jun 2019 - Dec 2020)
+- Built landing pages using React for marketing campaigns.
+- Assisted senior developers with API integration tasks (mostly calling
+  third-party REST APIs, like payment gateways and SMS providers).
+- Wrote some unit tests using Jest when asked to, mainly for utility
+  functions.
+
+EDUCATION
+B.Tech Information Technology, Pune Institute of Computer Technology
+(2015-2019)
+
+SKILLS
+React, Redux, JavaScript, Node.js, Express, MongoDB, MySQL (basic),
+REST APIs, Git, Jira

@@ -1,0 +1,35 @@
+KARAN SINGH
+Delhi, India | karan.singh.tech@gmail.com | +91-9988776655
+
+PROFILE
+Passionate and dedicated full stack developer with a strong drive to learn
+new technologies and deliver high-quality software solutions in a fast
+paced environment. Team player with excellent problem-solving skills.
+
+EXPERIENCE
+
+Full Stack Developer — Innoventra Technologies (2021 - Present)
+- Worked on various projects using modern web technologies.
+- Responsible for developing and maintaining web applications.
+- Collaborated with cross-functional teams to deliver software solutions.
+- Involved in the full software development lifecycle.
+- Contributed to improving code quality and application performance.
+- Handled client requirements and translated them into technical
+  specifications.
+
+Software Developer Intern — Brightpath Digital (2020 - 2021)
+- Assisted the development team with coding tasks.
+- Learned about web development best practices.
+- Gained exposure to full stack development.
+
+EDUCATION
+B.Sc Computer Science, Delhi University (2017 - 2020)
+
+TECHNICAL SKILLS
+React, Node.js, JavaScript, TypeScript, SQL, Databases, REST APIs,
+GraphQL, System Design, AWS, Docker, Kubernetes, CI/CD, Agile, Scrum,
+Testing, Git, HTML, CSS, MongoDB, PostgreSQL, Microservices, Cloud
+Computing, Problem Solving, Team Collaboration, Communication
+
+CERTIFICATIONS
+- Full Stack Web Development (online course, completion certificate)

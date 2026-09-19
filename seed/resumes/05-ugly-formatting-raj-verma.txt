@@ -1,0 +1,46 @@
+RAJ                    VERMA
+raj.verma.cs@yahoo.com                                        Mumbai
++91-9000011122   |    linkedin.com/in/rajverma007
+
+====================================================================
+ SKILLS                          |  EXPERIENCE SNAPSHOT
+====================================================================
+ - React.JS                      |  Total Yrs: 5.5
+ - Node / Express                |  Current: Backend Eng @ Vantablack
+ - Postgres, MySQL               |  Previous: FS Dev @ Orenda Systems
+ - AWS (EC2,S3,Lambda)           |  Notice: 30 days
+ - Docker/K8s                    |
+====================================================================
+
+PROFESSIONAL EXPERIENCE
+Backend Engineer||Vantablack Innovations Pvt. Ltd.||Mumbai||2022-Present
+*Designed schema for orders DB(Postgres) supporting 500k+ rows,added
+indices to speed up reporting queries used by finance team.
+*built REST api's in node.js + typescript for the order-mgmt
+system...integrated with react frontend team owns
+*Wrote integration tests(jest+supertest) for critical payment paths
+*  On call rotation for backend services  * migrated ec2 instances
+to use RDS instead of self hosted mysql -- reduced db downtime
+incidents from 3/quarter to 0
+
+Full-Stack     Developer   -   Orenda   Systems   (2019   -   2022)
+Responsibilities included:
+ (a) frontend dev using React + some jQuery legacy pages
+ (b) node.js backend maintenance, express routes
+ (c) sql queries for admin reports (mysql)
+ (d) devops-lite: helped set up jenkins pipeline w/ senior eng
+ (e) client calls 1x/week to walk through progress -- got good
+     feedback from account manager re: communication
+
+TECH-STACK-EXPANDED>> react.js / redux / node.js / express.js /
+typescript(partial adoption 2021 onwards) / postgresql / mysql /
+aws(ec2, s3, lambda, rds) / docker / jenkins / jest / supertest /
+git / bitbucket
+
+EDUCATION
+----------
+B.E (Computer Engg) -- Mumbai University -- 2015-2019 -- CGPA 8.1
+
+REFERENCES: available on request. Portfolio link broken as of resume
+export (see linkedin instead) -- pdf generated via [word->pdf export,
+v.2016, columns=2, encoding=legacy-cp1252]

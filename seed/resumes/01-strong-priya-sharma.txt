@@ -1,0 +1,44 @@
+PRIYA SHARMA
+Bengaluru, India | priya.sharma.dev@gmail.com | +91 98765 43210
+linkedin.com/in/priyasharma-dev | github.com/priyasharma
+
+SUMMARY
+Full stack engineer with 6 years of experience building and scaling
+production web applications. Deep expertise in React and Node.js, with a
+track record of owning features from database schema through to shipped UI.
+
+EXPERIENCE
+
+Senior Software Engineer — Zylker Technologies (2022–Present)
+- Led the rebuild of the checkout flow in React, cutting median page load
+  time from 3.2s to 1.1s by introducing code-splitting and memoized
+  selectors; this reduced cart abandonment by 14% over two quarters.
+- Designed the PostgreSQL schema for the new subscriptions billing system,
+  including composite indexes that brought a previously 4-second invoice
+  query down to 80ms at 2M rows.
+- Built and maintain a Node.js/TypeScript service exposing a GraphQL API
+  consumed by our mobile and web clients, handling ~40 req/s at peak.
+- Wrote the RFC for moving our monolith's checkout module to a separate
+  service; presented the trade-offs (latency vs. team autonomy) to the
+  engineering leadership team and got sign-off within one review cycle.
+- Introduced Jest + React Testing Library for the frontend team; raised
+  unit test coverage on the payments module from 20% to 85%.
+- On-call rotation owner for the payments team for 18 months; wrote the
+  incident postmortem process still in use today.
+
+Software Engineer — Kestrel Systems (2019–2022)
+- Built internal admin tools in React + Node.js/Express backed by
+  PostgreSQL, replacing a set of manual spreadsheets used by ops.
+- Migrated a legacy REST API to include pagination and rate limiting after
+  it caused two production incidents; documented the new contract for
+  three downstream teams.
+- Deployed services to AWS (ECS, RDS) with a CI/CD pipeline in GitHub
+  Actions that cut deploy time from 45 minutes to 6 minutes.
+
+EDUCATION
+B.E. Computer Science, RV College of Engineering, Bengaluru (2015–2019)
+
+SKILLS
+React, TypeScript, Node.js, Express, PostgreSQL, GraphQL, REST APIs,
+AWS (ECS, RDS, S3), Terraform (basic), Jest, React Testing Library,
+system design, technical writing
