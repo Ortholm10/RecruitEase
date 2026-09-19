@@ -8,6 +8,7 @@ import { ArtifactView } from "@/components/interview/artifact-view";
 import { ConsentScreen } from "@/components/interview/consent-screen";
 import { Timer } from "@/components/interview/timer";
 import { useIntegritySignals } from "@/hooks/use-integrity-signals";
+import { canaryDirective } from "@/lib/interview/canary";
 import { cn } from "@/lib/utils";
 import type { InterviewPlan, InterviewStateResponse, ServedQuestion } from "@/types";
 
@@ -333,6 +334,13 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
           {current.requirementId ? ` · ${current.requirementId}` : ""}
         </p>
         <p className="text-lg font-medium whitespace-pre-wrap text-pretty">{current.prompt}</p>
+        {/* Tier 3 canary: hidden from human view (sr-only) but readable by a
+            screen-scraping tool. Derived from the question id only, so the
+            server can verify it without the room sending anything extra and
+            nothing canary-related is ever persisted. */}
+        <span className="sr-only pointer-events-none select-none">
+          {canaryDirective(current.id)}
+        </span>
         {current.type === "artifact" && current.artifactPayload ? (
           <ArtifactView payload={current.artifactPayload} />
         ) : null}

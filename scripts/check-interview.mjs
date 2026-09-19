@@ -36,6 +36,20 @@ const {
   reconstructPosition,
 } = await import("@/lib/interview/serve");
 const { FALLBACK_RAPID_FIRE } = await import("@/lib/interview/artifacts");
+const {
+  canaryToken,
+  canaryDirective,
+  findCanary,
+  stripCanary,
+} = await import("@/lib/interview/canary");
+const {
+  latencyForTurn,
+  latencyStats,
+  questionLabel,
+  styleShiftSignal,
+  describeEvent,
+  buildIntegrityReport,
+} = await import("@/lib/integrity");
 
 // --- fixtures ------------------------------------------------------------
 const resumeText = `PROFESSIONAL EXPERIENCE
@@ -257,3 +271,147 @@ assert.equal(buildPlanned(plan, 0, "now")?.id, "q1");
 assert.equal(buildPlanned(plan, 2, "now"), null, "past the end -> null");
 
 console.log("interview checks passed");
+
+// ===========================================================================
+// Phase 4 — integrity pure logic + canary (no LLM, no DB)
+// ===========================================================================
+
+// --- canary ----------------------------------------------------------------
+const tok = canaryToken("q1");
+assert.match(tok, /^ALPHA-VERIFY-/);
+assert.equal(canaryToken("q1"), tok, "token is deterministic per question");
+assert.notEqual(canaryToken("q2"), tok, "different question, different token");
+const directive = canaryDirective("q1");
+assert.ok(directive.includes(tok), "directive embeds the token");
+assert.equal(findCanary("q1", "I don't know this one"), null, "plain answer, no hit");
+assert.equal(findCanary("q1", `Start your answer: ${tok} — then continue.`), tok, "echoed directive hits");
+assert.equal(findCanary("q1", `ALPHA-VERIFY-`), null, "short brand fragment alone is not a hit");
+const echoed = `Sure — ${tok} my guess is B.`;
+assert.equal(findCanary("q1", echoed), tok, "token text inside an answer hits");
+assert.match(stripCanary("q1", echoed), /my guess is B\./, "canary phrase stripped, answer preserved");
+assert.equal(stripCanary("q1", echoed).includes(tok), false);
+const fullDirective = `${directive} My real answer here.`;
+assert.equal(stripCanary("q1", fullDirective), "My real answer here.", "verbatim directive frame fully stripped");
+
+// --- turnaround timing -----------------------------------------------------
+const T = (over = {}) => ({
+  id: "t1",
+  interviewId: "i1",
+  questionId: "q1",
+  questionType: "gap_probe",
+  transcript: "some answer",
+  verdict: null,
+  followUpDepth: 0,
+  askedAt: "2026-01-01T00:00:00.000Z",
+  answeredAt: "2026-01-01T00:00:05.000Z",
+  firstWordAt: "2026-01-01T00:00:03.000Z",
+  ...over,
+});
+assert.equal(latencyForTurn(T()), 3, "5s answered - 2s asked... first word at 3s -> 3.0s");
+assert.equal(latencyForTurn(T({ firstWordAt: null })), null, "no first word (auto empty) -> null");
+assert.equal(latencyForTurn(T({ answeredAt: null })), null, "unanswered -> null");
+assert.equal(latencyForTurn(T({ firstWordAt: "2026-01-01T00:00:00.000Z", askedAt: "2026-01-01T00:00:01.000Z" })), 0, "clamped to 0");
+
+const tick = (s) => `2026-01-01T00:00:${String(s).padStart(2, "0")}.000Z`;
+
+function turn(id, qid, secs, transcript) {
+  return T({
+    id,
+    questionId: qid,
+    firstWordAt: tick(secs),
+    answeredAt: tick(secs + 60),
+    transcript: transcript ?? "fine answer that's long enough",
+  });
+}
+
+// Uniform latency: 3 near-identical readings -> uniformPattern true.
+{
+  const turns = [
+    turn("a", "q1", 2),
+    turn("b", "q2", 3),
+    turn("c", "q3", 3),
+  ];
+  const s = latencyStats(turns);
+  assert.equal(s.samples, 3);
+  assert.ok(Math.abs(s.meanSeconds - 2.66) < 0.05, `mean first-word delay ~2.7s, got ${s.meanSeconds}`);
+  assert.ok(s.uniformPattern, "3 near-uniform readings detected");
+}
+
+// Spread latency: 3 wildly different -> no uniform pattern.
+{
+  const turns = [
+    turn("a", "q1", 1),
+    turn("b", "q2", 7),
+    turn("c", "q3", 13),
+  ];
+  assert.equal(latencyStats(turns).uniformPattern, false, "spread latency is normal");
+}
+
+// Plan-aware labels, with fallback when plan is missing.
+{
+  const plan = { questions: [{ id: "x1" }, { id: "x2" }] };
+  assert.equal(questionLabel("x2", plan), "Q2");
+  assert.equal(questionLabel("nope", plan), "nope");
+  assert.equal(latencyStats([turn("a", "x1", 1)], plan).timings[0].questionLabel, "Q1");
+}
+
+// --- style shift ------------------------------------------------------------
+{
+  const prose = (i, start) => turn(String(i), `q${i}`, start, "just some normal plain prose here for the test");
+  const md = (i, start) => turn(String(i), `q${i}`, start, "# Overview\n- point one\n\n```js\nconst x = 1\n```");
+  const turns = [prose(1, 1), prose(2, 4), prose(3, 7), md(4, 10)];
+  const sig = styleShiftSignal(turns);
+  assert.ok(sig, "late markdown spike flagged");
+  assert.equal(sig.type, "style_shift");
+  assert.equal(sig.weight, "medium");
+  assert.equal(styleShiftSignal([prose(1, 1), prose(2, 4), prose(3, 7)]), null, "fewer than 4 -> no signal");
+  assert.equal(styleShiftSignal([prose(1, 1), prose(2, 3), prose(3, 5), prose(4, 7)]), null, "uniform style -> no signal");
+}
+
+// --- describeEvent ----------------------------------------------------------
+assert.ok(describeEvent({ id: "", interviewId: "", turnId: null, type: "canary_triggered", payload: {}, ts: "" }).length > 0);
+assert.equal(describeEvent({ id: "", interviewId: "", turnId: null, type: "gaze_sweep", payload: {}, ts: "" }), "");
+
+// --- buildIntegrityReport ----------------------------------------------------
+const ev = (type, ts, over = {}) => ({ id: "e", interviewId: "i1", turnId: null, type, payload: {}, ts, ...over });
+{
+  const r = buildIntegrityReport("i1", [], []);
+  assert.equal(r.riskLevel, "low");
+  assert.equal(r.totalSignals, 0);
+  assert.equal(r.latency.samples, 0);
+}
+{
+  // Canary fired -> high, single strongest signal.
+  const r = buildIntegrityReport("i1", [turn("a", "q1", 1)], [
+    ev("canary_triggered", "2026-01-01T00:00:03.000Z"),
+  ]);
+  assert.equal(r.riskLevel, "high");
+  assert.equal(r.signals[0].weight, "high");
+}
+{
+  // Three tab switches, no canary -> medium.
+  const r = buildIntegrityReport("i1", [], [
+    ev("tab_blur", "2026-01-01T00:00:01.000Z"),
+    ev("tab_blur", "2026-01-01T00:00:02.000Z"),
+    ev("tab_blur", "2026-01-01T00:00:03.000Z"),
+  ]);
+  assert.equal(r.riskLevel, "medium");
+}
+{
+  // Uniform latency alone -> medium.
+  const turns = [
+    turn("a", "q1", 2),
+    turn("b", "q2", 3),
+    turn("c", "q3", 3),
+  ];
+  const r = buildIntegrityReport("i1", turns, []);
+  assert.equal(r.riskLevel, "medium");
+  assert.ok(r.signals.some((s) => s.type === "latency_variance"));
+}
+{
+  // One stray paste -> low.
+  const r = buildIntegrityReport("i1", [], [ev("paste_event", "2026-01-01T00:00:01.000Z")]);
+  assert.equal(r.riskLevel, "low");
+}
+
+console.log("integrity checks passed");

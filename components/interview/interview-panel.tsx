@@ -1,6 +1,7 @@
 import type { Interview, Turn } from "@/types";
 import { findLatestInterviewForCandidate, listTurns } from "@/lib/interview/queries";
 import { TranscriptView } from "@/components/interview/transcript-view";
+import { IntegrityPanel } from "@/components/integrity/integrity-panel";
 import { CopyInterviewLinkButton } from "@/components/interview/copy-interview-link-button";
 
 type InterviewRow = Interview;
@@ -47,7 +48,14 @@ export async function InterviewPanel({ candidateId }: { candidateId: string }) {
           finishes the interview.
         </p>
       ) : (
-        <TranscriptView plan={interview.plan} interviewId={interview.id} />
+        <div className="flex flex-col gap-4">
+          <TranscriptView plan={interview.plan} interviewId={interview.id} />
+          <IntegrityPanel
+            interviewId={interview.id}
+            turns={turns}
+            plan={interview.plan}
+          />
+        </div>
       )}
     </section>
   );

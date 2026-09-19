@@ -40,7 +40,7 @@ export function useIntegritySignals(opts: {
   });
 
   useEffect(() => {
-    function record(label: ListenerId) {
+    function record(label: ListenerId, extraPayload?: Record<string, unknown>) {
       const { interviewId, email, enabled, currentQuestionId } = optsRef.current;
       if (!enabled) return;
       const last = lastSentRef.current[label];
@@ -55,7 +55,9 @@ export function useIntegritySignals(opts: {
           type: label as IntegrityEventType,
           ts: new Date().toISOString(),
           email,
-          payload: currentQuestionId ? { questionId: currentQuestionId } : undefined,
+          payload: currentQuestionId
+            ? { questionId: currentQuestionId, ...extraPayload }
+            : extraPayload,
         }),
       }).catch(() => {
         // fire-and-forget: a failed integrity ping is not worth a retry storm
@@ -71,8 +73,11 @@ export function useIntegritySignals(opts: {
     function onFullscreen() {
       if (!document.fullscreenElement) record("fullscreen_exit");
     }
-    function onPaste() {
-      record("paste_event");
+    function onPaste(e: ClipboardEvent) {
+      // Log how much was pasted (capped to a sane value) but never block the
+      // paste — pasting is a legitimate input for some candidates.
+      const text = e.clipboardData?.getData("text") ?? "";
+      record("paste_event", text.length ? { pastedLength: Math.min(text.length, 4096) } : undefined);
     }
 
     document.addEventListener("visibilitychange", onVisibility);

@@ -266,6 +266,31 @@ export interface IntegritySummary {
   signals: IntegrityEvent[];
 }
 
+/** One objective, weightable reading from the integrity layer. A signal is
+ *  never a verdict on its own — families aggregate into a single risk level. */
+export interface IntegritySignal {
+  type: string; // event family or computed signal name, e.g. "canary_triggered" | "style_shift"
+  timestamp: string; // ISO of the reading
+  weight: IntegrityRiskLevel;
+  evidence: string; // human-readable, objective — never accusatory
+}
+
+/** Computed recruiter-side integrity report for a (completed) interview.
+ *  Outputs objective evidence + a weighted risk category only — never a
+ *  binary cheater / not-cheater verdict. */
+export interface IntegrityReport {
+  interviewId: string;
+  riskLevel: IntegrityRiskLevel;
+  totalSignals: number;
+  latency: {
+    samples: number; // answered turns with a first_word_at reading
+    meanSeconds: number;
+    stdDevSeconds: number;
+    uniformPattern: boolean; // near-constant delay across varying difficulty
+  };
+  signals: IntegritySignal[];
+}
+
 // ------------------------------------------------------------
 // Reports   (table: reports)
 // ------------------------------------------------------------

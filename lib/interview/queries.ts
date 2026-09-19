@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Interview, InterviewPlan, Turn } from "@/types";
+import type { IntegrityEvent, Interview, InterviewPlan, Turn } from "@/types";
 
 type InterviewRow = {
   id: string;
@@ -104,4 +104,33 @@ export async function listTurns(interviewId: string): Promise<Turn[]> {
     .order("asked_at", { ascending: true });
   if (error) throw new Error(`Could not load turns: ${error.message}`);
   return (data as TurnRow[]).map(mapTurn);
+}
+
+type IntegrityEventRow = {
+  id: string;
+  interview_id: string;
+  turn_id: string | null;
+  type: string;
+  payload: Record<string, unknown>;
+  ts: string;
+};
+
+/** All integrity events for an interview, oldest first. RLS-scoped to the
+ *  recruiter who owns the interview's job. */
+export async function listIntegrityEvents(interviewId: string): Promise<IntegrityEvent[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("integrity_events")
+    .select("id, interview_id, turn_id, type, payload, ts")
+    .eq("interview_id", interviewId)
+    .order("ts", { ascending: true });
+  if (error) throw new Error(`Could not load integrity events: ${error.message}`);
+  return ((data ?? []) as IntegrityEventRow[]).map((r) => ({
+    id: r.id,
+    interviewId: r.interview_id,
+    turnId: r.turn_id,
+    type: r.type as IntegrityEvent["type"],
+    payload: r.payload ?? {},
+    ts: r.ts,
+  }));
 }

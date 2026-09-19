@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateStructured } from "@/lib/ai/client";
 import { writeAudit } from "@/lib/audit";
+import { findCanary, stripCanary } from "@/lib/interview/canary";
 import { answerClassificationLLMSchema } from "@/types/schemas";
 import { concretenessFollowUp, reconcileFollowUp } from "@/lib/interview/artifacts";
 import { ApiError, resolveInterviewAccess } from "@/lib/interview/access";
@@ -135,9 +136,16 @@ export async function answerTurn(opts: {
     }
   }
 
+  // Tier 3 — strip any hidden canary token BEFORE the classifier and before
+  // persistence. Detection is local and deterministic: the room renders the
+  // same directive derived from the question id.
+  const rawTranscript = typeof req.transcript === "string" ? req.transcript : "";
+  const canary = findCanary(parent.id, rawTranscript);
+  const transcript = canary ? stripCanary(parent.id, rawTranscript) : rawTranscript;
+
   // Classify BEFORE inserting so a failed/rate-limited model call leaves no
   // partial row — the answer endpoint then returns a clean retryable error.
-  const { object, model } = await classifyAnswer(parent, req.transcript);
+  const { object, model } = await classifyAnswer(parent, transcript);
 
   const nowIso = () => new Date().toISOString();
 
@@ -145,7 +153,7 @@ export async function answerTurn(opts: {
     asked_at: servedAt.toISOString(),
     first_word_at: firstWordAt?.toISOString() ?? null,
     answered_at: answeredAt.toISOString(),
-    transcript: req.transcript,
+    transcript,
     evidence_linked_requirement:
       req.followUpDepth > 0 ? req.promptServed : (parent.requirementId ?? null),
   };
@@ -203,6 +211,32 @@ export async function answerTurn(opts: {
       throw new ApiError(500, "Could not record the answer. Please retry.");
     }
     turnId = inserted.data.id as string;
+  }
+
+  // Tier 3 — persist the canary event for the audit trail. Best-effort: a
+  // failed event write never fails the answer that already succeeded.
+  if (canary) {
+    const ev = await writeClient
+      .from("integrity_events")
+      .insert({
+        interview_id: interview.id,
+        turn_id: turnId,
+        type: "canary_triggered",
+        payload: { questionId: parent.id },
+        ts: answeredAt.toISOString(),
+      });
+    if (ev.error) {
+      console.warn("[interviews] could not persist canary event:", ev.error.message);
+    }
+    await writeAudit({
+      entity: "turn",
+      entityId: turnId,
+      action: "canary_triggered",
+      actorId: "system",
+      model,
+      promptVersion: CLASSIFY_PROMPT_VERSION,
+      sourceRef: JSON.stringify({ questionId: parent.id, canary }),
+    });
   }
 
   const followUpDecision =
