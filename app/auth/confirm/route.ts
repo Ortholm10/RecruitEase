@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ensureProfile } from "@/app/auth/actions";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { type NextRequest } from "next/server";
@@ -17,6 +18,14 @@ export async function GET(request: NextRequest) {
       token_hash,
     });
     if (!error) {
+      // verifyOtp() just established a session on this client instance,
+      // so this insert satisfies the "profiles: self insert" RLS policy.
+      const profileResult = await ensureProfile(supabase);
+      if (profileResult.error) {
+        redirect(
+          `/auth/error?error=${encodeURIComponent(`Signed in, but profile setup failed: ${profileResult.error}`)}`,
+        );
+      }
       // redirect user to specified redirect URL or root of app
       redirect(next);
     } else {

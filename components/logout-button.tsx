@@ -1,17 +1,21 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { useLogout } from "@/hooks/use-logout";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 
 export function LogoutButton() {
-  const router = useRouter();
+  const { logout, isLoading, error } = useLogout();
 
-  const logout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/auth/login");
-  };
-
-  return <Button onClick={logout}>Logout</Button>;
+  return (
+    <div className="flex flex-col items-end gap-1">
+      {error && (
+        <span role="alert" className="text-xs text-destructive">
+          {error}
+        </span>
+      )}
+      <Button onClick={logout} disabled={isLoading}>
+        {isLoading ? "Logging out..." : "Logout"}
+      </Button>
+    </div>
+  );
 }

@@ -33,13 +33,28 @@ export function LoginForm({
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
-      // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push("/protected");
+
+      const userId = data.user?.id;
+      if (!userId) throw new Error("Login succeeded but no user was returned.");
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error(
+          "Your account setup isn't complete yet. Please contact support.",
+        );
+      }
+
+      router.push(profile.role === "recruiter" ? "/dashboard" : "/portal");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
