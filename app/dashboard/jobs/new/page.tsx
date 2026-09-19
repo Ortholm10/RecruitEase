@@ -28,8 +28,8 @@ export default function NewJobPage() {
         <CardHeader>
           <CardTitle>Create a job</CardTitle>
           <CardDescription>
-            Paste the job description as-is — structured requirements get
-            extracted from it later.
+            Paste the job description as-is. Structured requirements are
+            extracted from it when you create the job.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -61,7 +61,7 @@ export default function NewJobPage() {
               </p>
             )}
             <Button type="submit" disabled={isPending} className="w-fit">
-              {isPending ? "Creating..." : "Create job"}
+              {isPending ? "Creating job and extracting requirements..." : "Create job"}
             </Button>
           </form>
         </CardContent>

@@ -44,9 +44,19 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-verdict-strong: var(--verdict-strong);
+  --color-verdict-partial: var(--verdict-partial);
+  --color-verdict-unproven: var(--verdict-unproven);
+  --color-verdict-absent: var(--verdict-absent);
 }
 
 :root {
+  /* Verdict status colors (validated: CVD + normal-vision separation).
+     Never carry meaning alone: always paired with an icon + label. */
+  --verdict-strong: #0e9384;
+  --verdict-partial: #c98a06;
+  --verdict-unproven: #6c63d9;
+  --verdict-absent: #d03b3b;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -82,6 +92,7 @@
 }
 
 .dark {
+  --verdict-partial: #b7800a;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
