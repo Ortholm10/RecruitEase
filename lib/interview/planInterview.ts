@@ -76,7 +76,7 @@ function buildPrompt(input: {
 
 /** Pull the "Claim: \"...\"" line the model was told to include; returns the
  *  raw claim plus the prompt with that scaffolding stripped. */
-function extractClaim(prompt: string): { claim: string | null; clean: string } {
+export function extractClaim(prompt: string): { claim: string | null; clean: string } {
   const m = prompt.match(/Claim:\s*["“]([^"”]+)["”]\s*(?:Question:\s*)?/i);
   if (!m) return { claim: null, clean: prompt.trim() };
   return { claim: m[1], clean: prompt.slice(m[0].length).trim() };
@@ -85,7 +85,7 @@ function extractClaim(prompt: string): { claim: string | null; clean: string } {
 /** Order stored claims so the strongest grounded ones are used as fallback
  *  resume probes: concrete achievements first, then skill evidence that
  *  actually shows work, then whatever else is grounded. */
-function rankFields(fields: ExtractedField[]): ExtractedField[] {
+export function rankFields(fields: ExtractedField[]): ExtractedField[] {
   const rank = (f: ExtractedField): number => {
     if (!f.evidence.grounded || !f.evidence.quote.trim()) return 99;
     const v = f.value.toLowerCase();
@@ -101,7 +101,7 @@ function rankFields(fields: ExtractedField[]): ExtractedField[] {
 /** Exactly 2 resume probes, each verified grounded in resume_text. The model
  *  is required to quote its claim; findQuote() confirms it. Unusable drafts
  *  drop out and the next strongest stored claim fills the slot. */
-function pickResumeProbes(drafts: LLMDraft[], fields: ExtractedField[], resumeText: string): PlannedQuestion[] {
+export function pickResumeProbes(drafts: LLMDraft[], fields: ExtractedField[], resumeText: string): PlannedQuestion[] {
   const probes: PlannedQuestion[] = [];
   const used = new Set<string>();
   const add = (quote: string, prompt: string, from: "model" | "code") => {
@@ -139,7 +139,7 @@ function pickResumeProbes(drafts: LLMDraft[], fields: ExtractedField[], resumeTe
 /** Exactly 2 gap probes: the 2 highest-weight partial/unproven requirements.
  *  Deeper fill (degenerate jobs with tiny requirement lists) uses the weakest
  *  remaining verdicts so the weakest evidence gets probed. */
-function pickGapTargets(score: Score, requirements: Requirement[]): RequirementScore[] {
+export function pickGapTargets(score: Score, requirements: Requirement[]): RequirementScore[] {
   const weightOf = (id: string) => requirements.find((r) => r.id === id)?.weight ?? 0;
   const pool = score.breakdown.filter((b) => b.verdict === "partial" || b.verdict === "unproven");
   const chosen = [...pool].sort((a, b) => weightOf(b.requirementId) - weightOf(a.requirementId)).slice(0, 2);
@@ -155,7 +155,7 @@ function pickGapTargets(score: Score, requirements: Requirement[]): RequirementS
 
 /** 3 rapid fire always, model drafts used verbatim when usable, canned
  *  fallbacks otherwise. Cap enforced in code on every one. */
-function pickRapidFire(drafts: LLMDraft[]): PlannedQuestion[] {
+export function pickRapidFire(drafts: LLMDraft[]): PlannedQuestion[] {
   const usable = drafts
     .filter((d) => d.type === "rapid_fire" && d.prompt.trim().length >= 12)
     .map((d) => d.prompt.trim());
@@ -172,7 +172,7 @@ function pickRapidFire(drafts: LLMDraft[]): PlannedQuestion[] {
   return out;
 }
 
-function assemble(input: {
+export function assemble(input: {
   candidateId: string;
   requirements: Requirement[];
   score: Score;
