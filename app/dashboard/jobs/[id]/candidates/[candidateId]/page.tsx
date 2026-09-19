@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { getJobById } from "@/lib/jobs";
 import { getCandidateWithScore } from "@/lib/candidates";
 import { EvidenceView } from "@/components/candidates/evidence-view";
+import { StartInterviewButton } from "@/components/interview/start-interview-button";
 
 type Params = Promise<{ id: string; candidateId: string }>;
 
@@ -38,7 +39,24 @@ async function CandidateEvidence({ params }: { params: Params }) {
       </div>
 
       {score ? (
-        <EvidenceView requirements={job.requirements} candidate={candidate} score={score} />
+        <>
+          <section
+            aria-labelledby="interview-heading"
+            className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card p-5"
+          >
+            <div className="flex flex-col gap-1">
+              <h2 id="interview-heading" className="font-semibold">
+                Pre-interview
+              </h2>
+              <p className="text-sm text-muted-foreground text-pretty">
+                Generates an adaptive text interview from this score: 2 resume probes, 2 gap probes, 1 artifact
+                question and 3 rapid-fire questions, with adaptive follow-ups capped at two per question.
+              </p>
+            </div>
+            <StartInterviewButton candidateId={candidate.id} />
+          </section>
+          <EvidenceView requirements={job.requirements} candidate={candidate} score={score} />
+        </>
       ) : (
         <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
           Scoring didn&apos;t finish for this candidate. Use the retry button in the upload list where the

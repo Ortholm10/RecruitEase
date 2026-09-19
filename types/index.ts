@@ -206,6 +206,46 @@ export interface Turn {
 }
 
 // ------------------------------------------------------------
+// Phase 3 wire contracts (interview room <-> API routes)
+// A question as actually served to the candidate: base question +
+// how deep into its follow-up chain it is + when it was shown.
+// ------------------------------------------------------------
+
+export interface ServedQuestion extends PlannedQuestion {
+  followUpDepth: number;
+  servedAt: string;
+}
+
+export interface AnswerTurnRequest {
+  questionId: string;
+  followUpDepth: number;
+  transcript: string;
+  firstWordAt: string | null; // null when the box was auto-submitted empty (rapid fire)
+  answeredAt: string;
+  servedAt: string; // when the room presented this question (server-issued)
+  promptServed: string; // exact question text shown — persisted for the transcript view
+}
+
+export type AnswerTurnResult =
+  | { done: true }
+  | { done: false; next: ServedQuestion };
+
+export interface InterviewStateResponse {
+  interviewId: string;
+  status: InterviewStatus;
+  candidateName: string;
+  plan: InterviewPlan;
+  progress: { answered: number; total: number };
+  servedQuestion: ServedQuestion | null; // null when the interview is complete
+}
+
+export interface IntegrityEventRequest {
+  type: IntegrityEventType;
+  ts: string; // client clock
+  payload?: Record<string, unknown>;
+}
+
+// ------------------------------------------------------------
 // Integrity   (table: integrity_events)
 // ------------------------------------------------------------
 
