@@ -97,6 +97,10 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
             served = { ...served, prompt: saved.pending.prompt, servedAt: saved.pending.servedAt };
           }
           applyQuestion(served, body.plan ?? null, body.progress?.answered ?? 0);
+        } else if (res.ok && body.status === "in_progress") {
+          // in_progress with nothing left to serve only happens if the plan was
+          // exhausted without a completed status — treat it as finished.
+          setPhase("done");
         }
         // not_started → stay on the gate with the email prefilled
       })

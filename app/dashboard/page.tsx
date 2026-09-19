@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Briefcase } from "lucide-react";
 import { listJobsForCurrentRecruiter } from "@/lib/jobs";
+import { countCandidatesForRecruiter } from "@/lib/candidates";
 import { StatsRow } from "@/components/dashboard/stats-row";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,14 @@ import {
 } from "@/components/ui/card";
 
 async function JobsOverview() {
-  const jobs = await listJobsForCurrentRecruiter();
+  const [jobs, candidateCount] = await Promise.all([
+    listJobsForCurrentRecruiter(),
+    countCandidatesForRecruiter(),
+  ]);
 
   return (
     <>
-      <StatsRow jobCount={jobs.length} />
+      <StatsRow jobCount={jobs.length} candidateCount={candidateCount} />
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Jobs</h1>

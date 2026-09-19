@@ -27,7 +27,7 @@ function StatCard({
   );
 }
 
-export function StatsRow({ jobCount }: { jobCount: number }) {
+export function StatsRow({ jobCount, candidateCount }: { jobCount: number; candidateCount: number }) {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <StatCard
@@ -35,7 +35,11 @@ export function StatsRow({ jobCount }: { jobCount: number }) {
         label={jobCount === 1 ? "Job posted" : "Jobs posted"}
         value={jobCount}
       />
-      <StatCard icon={Users} label="Candidates screened so far" value={0} />
+      <StatCard
+        icon={Users}
+        label={candidateCount === 1 ? "Candidate screened" : "Candidates screened so far"}
+        value={candidateCount}
+      />
     </div>
   );
 }

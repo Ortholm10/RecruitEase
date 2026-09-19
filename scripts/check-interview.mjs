@@ -170,7 +170,7 @@ assert.equal(rankFields(fields)[0].key, "achievement", "achievements rank first"
 }
 assert.equal(PLAN_PROMPT_VERSION, "plan-v1");
 
-// --- serve.ts: position reconstruction -----------------------------------
+// --- serve.ts: position reconstruction (exact, no phantom follow-ups) ------
 const plan = {
   id: "i1",
   candidateId: "c1",
@@ -185,11 +185,58 @@ const plan = {
 assert.equal(MAX_FOLLOW_UP_DEPTH, 2, "hard cap 2");
 assert.equal(MAX_TURNS, 14, "total turn cap 14");
 
-assert.deepEqual(reconstructPosition(plan, []), { parentIndex: 0, depth: 0 });
-assert.deepEqual(reconstructPosition(plan, [{ questionId: "q1", followUpDepth: 0 }]), { parentIndex: 0, depth: 1 });
-assert.deepEqual(reconstructPosition(plan, [{ questionId: "q1", followUpDepth: 0 }, { questionId: "q1", followUpDepth: 1 }]), { parentIndex: 0, depth: 2 });
-assert.deepEqual(reconstructPosition(plan, [{ questionId: "q1", followUpDepth: 0 }, { questionId: "q1", followUpDepth: 1 }, { questionId: "q1", followUpDepth: 2 }]), { parentIndex: 1, depth: 0 }, "capped parent advances");
-assert.deepEqual(reconstructPosition(plan, [{ questionId: "q1", followUpDepth: 2 }, { questionId: "q2", followUpDepth: 2 }]), null, "every parent exhausted -> done");
+// Nothing answered -> fresh question 1.
+assert.deepEqual(reconstructPosition(plan, []), { parentIndex: 0, depth: 0, prompt: null, servedAt: null });
+
+// Parent answered AND the classifier advanced -> next question. This is the
+// reload bug: the old heuristic resurrected a phantom follow-up on question 1.
+assert.deepEqual(
+  reconstructPosition(plan, [{ questionId: "q1", followUpDepth: 0, answered: true, prompt: null, servedAt: null }]),
+  { parentIndex: 1, depth: 0, prompt: null, servedAt: null },
+  "advanced parent moves on, no phantom follow-up",
+);
+
+// A served-but-unanswered follow-up resumes EXACTLY (prompt from its row).
+assert.deepEqual(
+  reconstructPosition(plan, [
+    { questionId: "q1", followUpDepth: 0, answered: true, prompt: null, servedAt: null },
+    { questionId: "q1", followUpDepth: 1, answered: false, prompt: "Tell me the exact number.", servedAt: "2026-01-01T00:00:01.000Z" },
+  ]),
+  { parentIndex: 0, depth: 1, prompt: "Tell me the exact number.", servedAt: "2026-01-01T00:00:01.000Z" },
+  "in-flight follow-up resumed verbatim",
+);
+
+// Follow-up chain complete but a deeper follow-up was served -> the in-flight
+// row wins (exact), even past the depth-2 cap marker.
+assert.deepEqual(
+  reconstructPosition(plan, [
+    { questionId: "q1", followUpDepth: 0, answered: true, prompt: null, servedAt: null },
+    { questionId: "q1", followUpDepth: 1, answered: true, prompt: null, servedAt: null },
+    { questionId: "q1", followUpDepth: 2, answered: false, prompt: "One more time, concretely.", servedAt: "2026-01-01T00:00:02.000Z" },
+  ]),
+  { parentIndex: 0, depth: 2, prompt: "One more time, concretely.", servedAt: "2026-01-01T00:00:02.000Z" },
+  "deepest served follow-up wins",
+);
+
+// Fully answered chain (d0..d2) with no pending -> advance to next question.
+assert.deepEqual(
+  reconstructPosition(plan, [
+    { questionId: "q1", followUpDepth: 0, answered: true, prompt: null, servedAt: null },
+    { questionId: "q1", followUpDepth: 1, answered: true, prompt: null, servedAt: null },
+    { questionId: "q1", followUpDepth: 2, answered: true, prompt: null, servedAt: null },
+  ]),
+  { parentIndex: 1, depth: 0, prompt: null, servedAt: null },
+  "capped parent advances",
+);
+
+assert.deepEqual(
+  reconstructPosition(plan, [
+    { questionId: "q1", followUpDepth: 2, answered: true, prompt: null, servedAt: null },
+    { questionId: "q2", followUpDepth: 2, answered: true, prompt: null, servedAt: null },
+  ]),
+  null,
+  "every parent answered -> done",
+);
 
 const first = firstServedQuestion(plan, "2026-01-01T00:00:00.000Z");
 assert.equal(first.id, "q1");

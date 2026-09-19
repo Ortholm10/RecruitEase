@@ -7,12 +7,17 @@ import { getCandidateWithScore } from "@/lib/candidates";
 import { EvidenceView } from "@/components/candidates/evidence-view";
 import { StartInterviewButton } from "@/components/interview/start-interview-button";
 import { InterviewPanel } from "@/components/interview/interview-panel";
+import { findLatestInterviewForCandidate } from "@/lib/interview/queries";
 
 type Params = Promise<{ id: string; candidateId: string }>;
 
 async function CandidateEvidence({ params }: { params: Params }) {
   const { id, candidateId } = await params;
-  const [job, found] = await Promise.all([getJobById(id), getCandidateWithScore(id, candidateId)]);
+  const [job, found, interview] = await Promise.all([
+    getJobById(id),
+    getCandidateWithScore(id, candidateId),
+    findLatestInterviewForCandidate(candidateId),
+  ]);
   if (!job || !found) notFound();
   const { candidate, score } = found;
 
@@ -50,11 +55,12 @@ async function CandidateEvidence({ params }: { params: Params }) {
                 Pre-interview
               </h2>
               <p className="text-sm text-muted-foreground text-pretty">
-                Generates an adaptive text interview from this score: 2 resume probes, 2 gap probes, 1 artifact
-                question and 3 rapid-fire questions, with adaptive follow-ups capped at two per question.
+                {interview
+                  ? "An interview already exists for this candidate — status, the share link and the results live below."
+                  : "Generates an adaptive text interview from this score: 2 resume probes, 2 gap probes, 1 artifact question and 3 rapid-fire questions, with adaptive follow-ups capped at two per question."}
               </p>
             </div>
-            <StartInterviewButton candidateId={candidate.id} />
+            {interview ? null : <StartInterviewButton candidateId={candidate.id} />}
           </section>
           <EvidenceView requirements={job.requirements} candidate={candidate} score={score} />
           <InterviewPanel candidateId={candidate.id} />

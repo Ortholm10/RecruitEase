@@ -133,26 +133,66 @@ export async function answerTurn(opts: {
 
   const nowIso = () => new Date().toISOString();
 
-  const inserted = await client
-    .from("turns")
-    .insert({
-      interview_id: interview.id,
-      question_id: parent.id,
-      question_type: req.followUpDepth === 0 ? parent.type : "follow_up",
-      follow_up_depth: req.followUpDepth,
-      asked_at: servedAt.toISOString(),
-      first_word_at: firstWordAt?.toISOString() ?? null,
-      answered_at: answeredAt.toISOString(),
-      transcript: req.transcript,
-      evidence_linked_requirement:
-        req.followUpDepth > 0 ? req.promptServed : (parent.requirementId ?? null),
-    })
-    .select("id")
-    .single();
-  if (inserted.error || !inserted.data) {
-    throw new ApiError(500, inserted.error?.message ?? "Could not persist the turn.");
+  const answerFields = {
+    asked_at: servedAt.toISOString(),
+    first_word_at: firstWordAt?.toISOString() ?? null,
+    answered_at: answeredAt.toISOString(),
+    transcript: req.transcript,
+    evidence_linked_requirement:
+      req.followUpDepth > 0 ? req.promptServed : (parent.requirementId ?? null),
+  };
+
+  let turnId: string;
+  if (req.followUpDepth > 0) {
+    // A follow-up is already inserted as an UNANSWERED row (created when it
+    // was served, so recovery is exact). Complete that same row instead of
+    // inserting a duplicate.
+    const existing = await client
+      .from("turns")
+      .update(answerFields)
+      .eq("interview_id", interview.id)
+      .eq("question_id", parent.id)
+      .eq("follow_up_depth", req.followUpDepth)
+      .is("answered_at", null)
+      .select("id")
+      .single();
+    turnId = existing.data?.id as string;
+    if (existing.error || !existing.data) {
+      // No in-flight row (sessions created before served-follow-up rows were
+      // introduced): fall back to a fresh answered row.
+      const inserted = await client
+        .from("turns")
+        .insert({
+          interview_id: interview.id,
+          question_id: parent.id,
+          question_type: "follow_up",
+          follow_up_depth: req.followUpDepth,
+          ...answerFields,
+        })
+        .select("id")
+        .single();
+      if (inserted.error || !inserted.data) {
+        throw new ApiError(500, inserted.error?.message ?? "Could not persist the turn.");
+      }
+      turnId = inserted.data.id as string;
+    }
+  } else {
+    const inserted = await client
+      .from("turns")
+      .insert({
+        interview_id: interview.id,
+        question_id: parent.id,
+        question_type: parent.type,
+        follow_up_depth: 0,
+        ...answerFields,
+      })
+      .select("id")
+      .single();
+    if (inserted.error || !inserted.data) {
+      throw new ApiError(500, inserted.error?.message ?? "Could not persist the turn.");
+    }
+    turnId = inserted.data.id as string;
   }
-  const turnId = inserted.data.id as string;
 
   const followUpDecision =
     (object.specificity === "generic" || object.consistency === "contradictory") &&
@@ -202,6 +242,30 @@ export async function answerTurn(opts: {
     prompt = object.followUpPrompt?.trim() || concretenessFollowUp();
   } else {
     prompt = object.followUpPrompt?.trim() || reconcileFollowUp(resumeAnchor(parent));
+  }
+
+  // Persist the served follow-up AS an unanswered turn row up-front. The state
+  // endpoint resumes from exactly this row (its prompt lives here), so a
+  // mid-follow-up reload can never guess wrong or show a stale question.
+  const served = await client
+    .from("turns")
+    .insert({
+      interview_id: interview.id,
+      question_id: parent.id,
+      question_type: "follow_up",
+      follow_up_depth: req.followUpDepth + 1,
+      asked_at: now,
+      first_word_at: null,
+      answered_at: null,
+      transcript: "",
+      evidence_linked_requirement: prompt,
+    })
+    .select("id")
+    .single();
+  if (served.error || !served.data) {
+    // Best effort: still serve the follow-up live; a reload then degrades to
+    // the same-parent fallback instead of the exact prompt.
+    console.warn("[interviews] could not persist served follow-up:", served.error?.message);
   }
 
   return {

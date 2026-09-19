@@ -7,10 +7,10 @@ import type { InterviewStateResponse } from "@/types";
  * GET /api/interviews/[id]/state?email=<candidate email>
  * Resume point for the room. Returns plan, progress and the currently served
  * question (or null when completed). A brand-new interview serves q1 via the
- * start endpoint; this endpoint reconstructs mid-interview position from the
- * answered turns. The pending follow-up prompt, when a follow-up is in flight,
- * is supplied by the room from localStorage — that prompt is what was actually
- * shown on screen.
+ * start endpoint; this endpoint reconstructs the exact mid-interview position
+ * from turn rows — a served-but-unanswered follow-up is resumed verbatim from
+ * its own row (prompt included), and an answered question advances to the next
+ * planned one. No guessing, so a reload can never resurrect a stale question.
  */
 export async function GET(
   req: Request,
@@ -25,31 +25,45 @@ export async function GET(
 
     const { data: turns } = await client
       .from("turns")
-      .select("question_id, follow_up_depth, answered_at")
-      .eq("interview_id", interview.id);
-    const answeredTurns =
-      (turns ?? []).filter((t: { answered_at: string | null }) => t.answered_at !== null) as {
-        question_id: string;
-        follow_up_depth: number;
-      }[];
+      .select("question_id, follow_up_depth, asked_at, answered_at, evidence_linked_requirement")
+      .eq("interview_id", interview.id)
+      .order("asked_at", { ascending: true });
+    const turnRows = (turns ?? []) as {
+      question_id: string;
+      follow_up_depth: number;
+      asked_at: string;
+      answered_at: string | null;
+      evidence_linked_requirement: string | null;
+    }[];
+    const answeredTurns = turnRows.filter((t) => t.answered_at !== null);
 
     const now = new Date().toISOString();
     let servedQuestion: InterviewStateResponse["servedQuestion"] = null;
     if (interview.status === "in_progress") {
       const pos = reconstructPosition(
         interview.plan,
-        answeredTurns.map((t) => ({ questionId: t.question_id, followUpDepth: t.follow_up_depth })),
+        turnRows.map((t) => ({
+          questionId: t.question_id,
+          followUpDepth: t.follow_up_depth,
+          answered: t.answered_at !== null,
+          prompt: t.answered_at === null ? (t.evidence_linked_requirement ?? null) : null,
+          servedAt: t.answered_at === null ? t.asked_at : null,
+        })),
       );
-      servedQuestion = pos ? buildPlanned(interview.plan, pos.parentIndex, now) : null;
-      if (pos && pos.depth > 0 && servedQuestion) {
-        // A follow-up slot is open; the room restores the exact served prompt
-        // from localStorage and patches it in. Serve the planned prompt as a
-        // floor so there is always something coherent on screen.
-        servedQuestion = {
-          ...servedQuestion,
-          type: "follow_up",
-          followUpDepth: pos.depth,
-        };
+      if (pos) {
+        const base = buildPlanned(interview.plan, pos.parentIndex, now);
+        if (base) {
+          servedQuestion =
+            pos.prompt !== null
+              ? {
+                  ...base,
+                  type: "follow_up",
+                  followUpDepth: pos.depth,
+                  prompt: pos.prompt,
+                  servedAt: pos.servedAt ?? now,
+                }
+              : base;
+        }
       }
     } else if (interview.status === "not_started") {
       servedQuestion = firstServedQuestion(interview.plan, now);

@@ -45,29 +45,58 @@ export function buildPlanned(plan: InterviewPlan, index: number, now: string): S
   return { ...q, followUpDepth: 0, servedAt: now };
 }
 
-/**
- * Storage-free reconstruction of the current position from answered turns.
- * Used by the state endpoint when resuming a mid-interview reload. A parent
- * whose deepest answered turn is below the cap is presumed to have an open
- * follow-up chain; a fully-capped parent (depth 2 answered) is exhausted.
- * The live follow-up prompt normally travels in localStorage (the room saves
- * it when a follow-up is served), so this is the fallback shape.
- */
+export type AnsweredTurn = {
+  questionId: string;
+  followUpDepth: number;
+  /** false while the follow-up has been SERVED but not answered (the room is
+   *  sitting on it); true once answered_at is set. */
+  answered: boolean;
+  /** The exact prompt that was served for an un-answered follow-up. Lives in
+   *  evidence_linked_requirement on the served (pre-answer) turn row. Planned
+   *  questions carry null — their prompt is in the plan. */
+  prompt: string | null;
+  /** When the in-flight follow-up was served (asked_at). */
+  servedAt: string | null;
+};
+
+export type ReconstructedPosition = {
+  parentIndex: number;
+  depth: number;
+  prompt: string | null;
+  servedAt: string | null;
+};
+
+/** Exact reconstruction of the live position from turn rows, used by the
+ *  state endpoint. No guessing:
+ *   - an UNSERVED-GAP marker does not exist; instead every served follow-up is
+ *     persisted up-front as a turn row with answered_at null, so this simply
+ *     returns it (with its exact prompt) when one is in flight;
+ *   - otherwise the last answered turn means "that question is done, next
+ *     planned question up" — a parent whose answer advanced past follow-ups
+ *     moves on, so a reload can never resurrect a phantom follow-up.
+ *  Callers must pass turns ordered by asked_at ascending. */
 export function reconstructPosition(
   plan: InterviewPlan,
-  answered: { questionId: string; followUpDepth: number }[],
-): { parentIndex: number; depth: number } | null {
-  const byParent = new Map<string, number[]>();
-  for (const t of answered) {
-    const depths = byParent.get(t.questionId) ?? [];
-    depths.push(t.followUpDepth);
-    byParent.set(t.questionId, depths);
+  turns: AnsweredTurn[],
+): ReconstructedPosition | null {
+  if (turns.length === 0) return { parentIndex: 0, depth: 0, prompt: null, servedAt: null };
+
+  const inFlight = [...turns].reverse().find((t) => !t.answered);
+  if (inFlight) {
+    const parentIndex = planIndexOf(plan, inFlight.questionId);
+    if (parentIndex === -1) return null;
+    return {
+      parentIndex,
+      depth: inFlight.followUpDepth,
+      prompt: inFlight.prompt,
+      servedAt: inFlight.servedAt ?? null,
+    };
   }
-  for (let i = 0; i < plan.questions.length; i++) {
-    const depths = byParent.get(plan.questions[i].id) ?? [];
-    if (depths.length === 0) return { parentIndex: i, depth: 0 };
-    const maxDepth = Math.max(...depths);
-    if (maxDepth < MAX_FOLLOW_UP_DEPTH) return { parentIndex: i, depth: maxDepth + 1 };
-  }
-  return null;
+
+  const lastAnswered = turns[turns.length - 1];
+  const parentIndex = planIndexOf(plan, lastAnswered.questionId);
+  if (parentIndex === -1) return null;
+  const next = parentIndex + 1;
+  if (next >= plan.questions.length) return null;
+  return { parentIndex: next, depth: 0, prompt: null, servedAt: null };
 }

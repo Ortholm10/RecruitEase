@@ -61,13 +61,11 @@ export const questionDraftLLMSchema = z.object({
   artifactPayload: z
     .string()
     .nullable()
-    .optional()
     .describe("Leave null — the artifact snippet is supplied by the application"),
   timeLimitSeconds: z
     .number()
     .int()
     .nullable()
-    .optional()
     .describe("Leave null — the application enforces 20s for rapid_fire"),
 });
 
