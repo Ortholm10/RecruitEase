@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArtifactView } from "@/components/interview/artifact-view";
 import { ConsentScreen } from "@/components/interview/consent-screen";
 import { Timer } from "@/components/interview/timer";
+import { useIntegritySignals } from "@/hooks/use-integrity-signals";
 import { cn } from "@/lib/utils";
 import type { InterviewPlan, InterviewStateResponse, ServedQuestion } from "@/types";
 
@@ -54,6 +55,15 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const firstWordRef = useRef<string | null>(null);
+
+  // Browser-integrity signals: only while the chat is live, keyed to the
+  // question on screen. Fire-and-forget POSTs, debounced per type.
+  useIntegritySignals({
+    interviewId,
+    email: email || undefined,
+    enabled: phase === "chat",
+    currentQuestionId: current?.id ?? null,
+  });
 
   // Resume-on-mount: if an email is already stored, ask the server where the
   // interview stands. Mid-interview reloads land straight back in the chat.
