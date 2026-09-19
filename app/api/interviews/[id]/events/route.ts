@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError, resolveInterviewAccess } from "@/lib/interview/access";
 import type { IntegrityEventRequest } from "@/types";
 
@@ -27,7 +28,7 @@ export async function POST(
       return NextResponse.json({ error: "Invalid body." }, { status: 400 });
     }
     const email = body.email?.trim() || undefined;
-    const { client, interview } = await resolveInterviewAccess(id, email);
+    const { interview } = await resolveInterviewAccess(id, email);
 
     if (interview.status !== "in_progress") {
       return NextResponse.json(
@@ -48,15 +49,16 @@ export async function POST(
     }
 
     const receivedAt = new Date().toISOString();
-    const inserted = await client.from("integrity_events").insert({
+    const inserted = await createAdminClient().from("integrity_events").insert({
       interview_id: interview.id,
       type: body.type,
       ts: new Date(body.ts).toISOString(),
       payload: { receivedAt, ...(body.payload ?? {}) },
     });
     if (inserted.error) {
+      console.error("[interviews/events] insert failed:", inserted.error.message);
       return NextResponse.json(
-        { error: inserted.error.message ?? "Could not record the event." },
+        { error: "Could not record the event." },
         { status: 500 },
       );
     }

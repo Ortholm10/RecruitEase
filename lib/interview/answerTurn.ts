@@ -1,3 +1,4 @@
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateStructured } from "@/lib/ai/client";
 import { writeAudit } from "@/lib/audit";
 import { answerClassificationLLMSchema } from "@/types/schemas";
@@ -77,6 +78,13 @@ export async function answerTurn(opts: {
 }): Promise<AnswerTurnResult> {
   const { client, interview } = await resolveInterviewAccess(opts.interviewId, opts.email);
 
+  // Turn persistence is a CANDIDATE-side write (email gate already passed in
+  // resolveInterviewAccess). It runs through the service-role client so RLS
+  // on `turns` can never lock a submission out when the request happens to
+  // carry a session token (e.g. a recruiter testing the room in their own
+  // logged-in browser). Reads stay on the resolved client.
+  const writeClient = createAdminClient();
+
   if (interview.status !== "in_progress") {
     throw new ApiError(409, `Interview is not in progress (status: ${interview.status}).`);
   }
@@ -112,7 +120,7 @@ export async function answerTurn(opts: {
     .from("turns")
     .select("question_id, follow_up_depth, answered_at")
     .eq("interview_id", interview.id)
-    .neq("answered_at", null);
+    .not("answered_at", "is", null);
   const answered = (history ?? []) as {
     question_id: string;
     follow_up_depth: number;
@@ -147,7 +155,7 @@ export async function answerTurn(opts: {
     // A follow-up is already inserted as an UNANSWERED row (created when it
     // was served, so recovery is exact). Complete that same row instead of
     // inserting a duplicate.
-    const existing = await client
+    const existing = await writeClient
       .from("turns")
       .update(answerFields)
       .eq("interview_id", interview.id)
@@ -160,7 +168,8 @@ export async function answerTurn(opts: {
     if (existing.error || !existing.data) {
       // No in-flight row (sessions created before served-follow-up rows were
       // introduced): fall back to a fresh answered row.
-      const inserted = await client
+      if (existing.error) console.warn("[interviews] follow-up update:", existing.error.message);
+      const inserted = await writeClient
         .from("turns")
         .insert({
           interview_id: interview.id,
@@ -172,12 +181,13 @@ export async function answerTurn(opts: {
         .select("id")
         .single();
       if (inserted.error || !inserted.data) {
-        throw new ApiError(500, inserted.error?.message ?? "Could not persist the turn.");
+        if (inserted.error) console.error("[interviews] follow-up insert:", inserted.error.message);
+        throw new ApiError(500, "Could not record the answer. Please retry.");
       }
       turnId = inserted.data.id as string;
     }
   } else {
-    const inserted = await client
+    const inserted = await writeClient
       .from("turns")
       .insert({
         interview_id: interview.id,
@@ -189,7 +199,8 @@ export async function answerTurn(opts: {
       .select("id")
       .single();
     if (inserted.error || !inserted.data) {
-      throw new ApiError(500, inserted.error?.message ?? "Could not persist the turn.");
+      if (inserted.error) console.error("[interviews] answer insert:", inserted.error.message);
+      throw new ApiError(500, "Could not record the answer. Please retry.");
     }
     turnId = inserted.data.id as string;
   }
@@ -216,10 +227,11 @@ export async function answerTurn(opts: {
   const answeredCount = answered.length + 1;
 
   async function complete(): Promise<AnswerTurnResult> {
-    await client
+    const { error } = await writeClient
       .from("interviews")
       .update({ status: "completed", completed_at: nowIso() })
       .eq("id", interview.id);
+    if (error) console.error("[interviews] complete update:", error.message);
     return { done: true };
   }
 
@@ -247,7 +259,7 @@ export async function answerTurn(opts: {
   // Persist the served follow-up AS an unanswered turn row up-front. The state
   // endpoint resumes from exactly this row (its prompt lives here), so a
   // mid-follow-up reload can never guess wrong or show a stale question.
-  const served = await client
+  const served = await writeClient
     .from("turns")
     .insert({
       interview_id: interview.id,

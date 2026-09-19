@@ -214,6 +214,10 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
 
   async function submit() {
     if (submitting || !current) return;
+    if (answer.trim().length > 0 && answer.trim().length < 3) {
+      setError("Your answer looks too short — please give a little more detail.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const payload = {
@@ -339,6 +343,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
           value={answer}
           onChange={(e) => {
             setAnswer(e.target.value);
+            if (error) setError(null);
             if (firstWordRef.current === null && e.target.value.trim().length > 0) {
               firstWordRef.current = new Date().toISOString();
             }

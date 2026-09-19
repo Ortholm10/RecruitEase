@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError, resolveInterviewAccess } from "@/lib/interview/access";
 import type { InterviewStateResponse } from "@/types";
 
@@ -17,7 +18,7 @@ export async function POST(
     const reqBody = (await req.json().catch(() => ({}))) as { email?: string };
     const email = reqBody.email?.trim() || undefined;
 
-    const { client, interview } = await resolveInterviewAccess(id, email);
+    const { interview } = await resolveInterviewAccess(id, email);
 
     if (interview.status !== "not_started") {
       return NextResponse.json(
@@ -32,15 +33,16 @@ export async function POST(
     }
 
     const now = new Date().toISOString();
-    const updated = await client
+    const updated = await createAdminClient()
       .from("interviews")
       .update({ status: "in_progress", started_at: now })
       .eq("id", interview.id)
       .select("status, started_at")
       .single();
     if (updated.error || !updated.data) {
+      if (updated.error) console.error("[interviews/start] update failed:", updated.error.message);
       return NextResponse.json(
-        { error: updated.error?.message ?? "Could not start the interview." },
+        { error: "Could not start the interview. Please retry." },
         { status: 500 },
       );
     }
