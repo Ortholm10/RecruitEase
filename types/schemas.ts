@@ -85,6 +85,28 @@ export const questionDraftsLLMSchema = z.object({
 // decided in code. The model never says "advance" or "ask a follow-up".
 // ------------------------------------------------------------
 
+// ------------------------------------------------------------
+// Reports — AI candidate summary. One call PER CANDIDATE (same pattern as
+// A5 scoring — a single combined prompt for a whole job blew past Groq's
+// per-minute token budget and the 60s call timeout), given that candidate's
+// resume score breakdown + interview evaluation (already assembled by
+// lib/report/buildReport.ts). The model only writes prose + a 1-100 fit
+// score; it never invents verdicts or requirement ids.
+// ------------------------------------------------------------
+
+export const candidateAiSummaryLLMSchema = z.object({
+  score: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .describe("Overall fit for the role, weighing resume screening and interview evidence together"),
+  summary: z.string().describe("2-3 sentence overview of this candidate's fit for the role"),
+  strengths: z.array(z.string()).max(4).describe("Concrete strengths grounded in the evidence given"),
+  concerns: z.array(z.string()).max(4).describe("Concrete concerns or gaps grounded in the evidence given"),
+  recommendation: z.enum(["advance", "reject", "pending"]),
+});
+
 export const answerClassificationLLMSchema = z.object({
   specificity: z
     .enum(["specific", "generic"])

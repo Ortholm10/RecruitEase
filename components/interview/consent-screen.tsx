@@ -9,8 +9,11 @@ import { Label } from "@/components/ui/label";
 
 /**
  * Door of the interview room. Email (the anonymous gate for link-entered
- * candidates) + an explicit consent checkbox. The interview does NOT start
- * until this screen's "Begin" posts to /start.
+ * candidates) + an explicit consent checkbox, plus a SEPARATE opt-in for the
+ * webcam attention check — camera access is a materially different kind of
+ * capture, so it gets its own box and can be declined without blocking the
+ * interview. The interview does NOT start until this screen's "Begin" posts to
+ * /start, and no camera permission is requested before then.
  */
 export function ConsentScreen({
   email,
@@ -27,9 +30,10 @@ export function ConsentScreen({
   questionCount: number;
   busy: boolean;
   error: string | null;
-  onBegin: () => void;
+  onBegin: (allowCamera: boolean) => void;
 }) {
   const [consented, setConsented] = useState(false);
+  const [allowCamera, setAllowCamera] = useState(true);
 
   return (
     <Card className="mx-auto w-full max-w-lg">
@@ -37,8 +41,8 @@ export function ConsentScreen({
         <CardTitle>Self-service technical interview</CardTitle>
         <CardDescription>
           {candidateName ? `Hi ${candidateName} —` : "Hello —"} this is a {questionCount}-question
-          written interview about the position. You answer in text; no camera, no microphone, no
-          video call.
+          written interview about the position. You answer in text — there is no video call, no
+          microphone, and no recording.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -66,6 +70,25 @@ export function ConsentScreen({
             I understand this is not a live proctored session.
           </span>
         </label>
+        <label className="flex items-start gap-2 rounded-lg border bg-muted/40 p-3 text-sm text-pretty">
+          <input
+            type="checkbox"
+            checked={allowCamera}
+            onChange={(e) => setAllowCamera(e.target.checked)}
+            className="mt-0.5 size-4 accent-foreground"
+          />
+          <span>
+            <span className="font-medium">Allow the webcam attention check (optional).</span>{" "}
+            If you tick this, your browser will ask for camera permission when the interview
+            opens. The video is analysed on your own device to work out roughly when you are
+            looking away from the screen. <strong>No video, image, or recording is ever
+            uploaded or stored</strong> — only notes like &ldquo;looked away&rdquo; with a
+            timestamp. A recruiter sees those notes as context alongside your answers; they are
+            never used to automatically reject anyone, and the camera turns off when the
+            interview ends. Leaving this unticked, or denying the browser prompt, does not
+            affect your interview.
+          </span>
+        </label>
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}
@@ -74,7 +97,7 @@ export function ConsentScreen({
         <Button
           type="button"
           disabled={busy || !email.trim() || !consented}
-          onClick={onBegin}
+          onClick={() => onBegin(allowCamera)}
           className="gap-2"
         >
           {busy ? (

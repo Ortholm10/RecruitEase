@@ -7,12 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArtifactView } from "@/components/interview/artifact-view";
 import { ConsentScreen } from "@/components/interview/consent-screen";
 import { Timer } from "@/components/interview/timer";
+import { useGazeTracking } from "@/hooks/use-gaze-tracking";
+import {
+  exitInterviewFullscreen,
+  requestInterviewFullscreen,
+  useInterviewLockdown,
+} from "@/hooks/use-interview-lockdown";
 import { useIntegritySignals } from "@/hooks/use-integrity-signals";
 import { canaryDirective } from "@/lib/interview/canary";
 import { cn } from "@/lib/utils";
 import type { InterviewPlan, InterviewStateResponse, ServedQuestion } from "@/types";
 
-type Phase = "gate" | "chat" | "done";
+type Phase = "gate" | "chat" | "done" | "terminated";
 
 type SavedState = { email?: string; pending?: { questionId: string; depth: number; prompt: string; servedAt: string } };
 
@@ -55,6 +61,10 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
   const [current, setCurrent] = useState<ServedQuestion | null>(null);
   const [answer, setAnswer] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Set by the consent screen's separate camera box; never assumed.
+  const [allowCamera, setAllowCamera] = useState(false);
+  // Lockdown: one warning, then the interview ends.
+  const [warning, setWarning] = useState(false);
   const firstWordRef = useRef<string | null>(null);
 
   // Browser-integrity signals: only while the chat is live, keyed to the
@@ -64,6 +74,32 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     email: email || undefined,
     enabled: phase === "chat",
     currentQuestionId: current?.id ?? null,
+  });
+
+  // Tier 2 — webcam gaze signals, behind the same gate plus the candidate's
+  // explicit camera opt-in. Fails open: if this never initialises, the room and
+  // the Tier 1 signals above are unaffected.
+  useGazeTracking({
+    interviewId,
+    email: email || undefined,
+    enabled: phase === "chat" && allowCamera,
+    currentQuestionId: current?.id ?? null,
+  });
+
+  // Fullscreen lockdown. Leaving the interview window warns once, then ends the
+  // interview. A browser cannot BLOCK Alt+Tab (the OS eats the keystroke), so
+  // this detects the departure rather than pretending to prevent it.
+  useInterviewLockdown({
+    interviewId,
+    email: email || undefined,
+    enabled: phase === "chat",
+    currentQuestionId: current?.id ?? null,
+    onWarn: () => setWarning(true),
+    onTerminate: () => {
+      setWarning(false);
+      setPhase("terminated");
+      exitInterviewFullscreen();
+    },
   });
 
   // Resume-on-mount: if an email is already stored, ask the server where the
@@ -85,6 +121,10 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         }
         if (res.ok && body.status === "completed") {
           setPhase("done");
+          return;
+        }
+        if (res.ok && body.status === "abandoned") {
+          setPhase("terminated");
           return;
         }
         if (res.ok && body.status === "in_progress" && body.servedQuestion) {
@@ -137,7 +177,11 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     setPhase("chat");
   }
 
-  async function begin() {
+  async function begin(cameraAllowed: boolean) {
+    setAllowCamera(cameraAllowed);
+    // Must happen synchronously inside the click gesture — after the awaits
+    // below the browser no longer treats this as user-initiated.
+    void requestInterviewFullscreen();
     setBusy(true);
     setError(null);
     try {
@@ -151,6 +195,11 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
         if (ares.status === 409 && abody.error?.includes("completed")) {
           writeSaved(interviewId, { email });
           setPhase("done");
+          return;
+        }
+        if (ares.status === 409 && abody.error?.includes("abandoned")) {
+          writeSaved(interviewId, { email, pending: undefined });
+          setPhase("terminated");
           return;
         }
         setError(abody.error ?? "Could not open the interview.");
@@ -247,6 +296,7 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
       if (body.done || !body.next) {
         writeSaved(interviewId, { email, pending: undefined });
         setPhase("done");
+        exitInterviewFullscreen();
         return;
       }
       if (current.followUpDepth > 0) {
@@ -258,6 +308,23 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (phase === "terminated") {
+    return (
+      <div className="mx-auto flex min-h-[60vh] w-full max-w-lg flex-col items-start justify-center gap-4">
+        <h1 className="text-2xl font-semibold text-destructive">Interview ended</h1>
+        <p className="text-muted-foreground text-pretty">
+          You left the interview window after being warned, so this interview was ended
+          automatically and cannot be resumed. The answers you had already submitted have been
+          kept and sent to the recruiter along with a record of what happened.
+        </p>
+        <p className="text-sm text-muted-foreground text-pretty">
+          If you believe this was a mistake — a notification stealing focus, assistive software,
+          or a device issue — contact the recruiter directly. You can close this tab.
+        </p>
+      </div>
+    );
   }
 
   if (phase === "done") {
@@ -314,6 +381,39 @@ export function InterviewRoom({ interviewId }: { interviewId: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 py-6">
+      {/* Rendered OVER the chat, never instead of it: unmounting the chat would
+          remount Timer and restart a rapid-fire countdown from zero. */}
+      {warning ? (
+        <div
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="lockdown-warning"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-destructive/95 p-6 text-center text-destructive-foreground"
+        >
+          <h1 id="lockdown-warning" className="text-3xl font-semibold">
+            Do not leave the interview window
+          </h1>
+          <p className="max-w-md text-pretty">
+            Switching tabs, switching windows, or leaving fullscreen is recorded. This is your
+            only warning — <strong>the next time it happens this interview will end immediately</strong>{" "}
+            and the recruiter will be notified.
+          </p>
+          <p className="max-w-md text-sm opacity-90 text-pretty">
+            Your timer is still running. Close any notifications before continuing.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              // The click is the gesture that lets us re-enter fullscreen.
+              void requestInterviewFullscreen();
+              setWarning(false);
+            }}
+          >
+            Return to the interview
+          </Button>
+        </div>
+      ) : null}
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           {progress.answered} answered · {progress.total} total

@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { BarChart3, ChevronDown } from "lucide-react";
 import { listCandidateAnalyses, groupCandidatesByJob } from "@/lib/candidates";
+import { listLatestInterviewsForCandidates } from "@/lib/interview/queries";
 import { EvidenceView } from "@/components/candidates/evidence-view";
 import { EmptyState } from "@/components/dashboard/empty-state";
+import { AiReportPanel } from "@/components/reports/ai-report-panel";
+import { TranscriptView } from "@/components/interview/transcript-view";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -11,6 +14,9 @@ import { cn } from "@/lib/utils";
 async function ReportsOverview() {
   const rows = await listCandidateAnalyses();
   const grouped = groupCandidatesByJob(rows);
+  const interviewByCandidate = await listLatestInterviewsForCandidates(
+    rows.map((r) => r.candidate.id),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -32,7 +38,7 @@ async function ReportsOverview() {
       ) : (
         grouped.map(({ job, candidates }) => (
           <Card key={job.id}>
-            <CardHeader>
+            <CardHeader className="flex flex-col gap-3">
               <CardTitle className="flex items-center gap-3">
                 <Link href={`/dashboard/jobs/${job.id}`} className="underline-offset-4 hover:underline">
                   {job.title}
@@ -41,10 +47,13 @@ async function ReportsOverview() {
                   {candidates.length} candidate{candidates.length === 1 ? "" : "s"}
                 </Badge>
               </CardTitle>
+              <AiReportPanel jobId={job.id} />
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              {candidates.map((analysis) =>
-                analysis.score ? (
+              {candidates.map((analysis) => {
+                const interview = interviewByCandidate.get(analysis.candidate.id) ?? null;
+                const hasResults = interview && interview.status !== "not_started";
+                return analysis.score ? (
                   <details key={analysis.candidate.id} className="group rounded-xl border bg-card">
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
                       <div className="flex min-w-0 flex-col gap-0.5">
@@ -62,12 +71,27 @@ async function ReportsOverview() {
                         />
                       </div>
                     </summary>
-                    <div className="border-t">
+                    <div className="flex flex-col gap-4 border-t p-4">
                       <EvidenceView
                         requirements={analysis.job.requirements}
                         candidate={analysis.candidate}
                         score={analysis.score}
                       />
+                      {hasResults ? (
+                        <details className="rounded-xl border bg-card/60">
+                          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-medium">
+                            View interview results
+                            <ChevronDown aria-hidden className="size-4 text-muted-foreground" />
+                          </summary>
+                          <div className="border-t p-4">
+                            <TranscriptView plan={interview!.plan} interviewId={interview!.id} />
+                          </div>
+                        </details>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          No interview taken yet — start one from the candidate&apos;s page to see results here.
+                        </p>
+                      )}
                     </div>
                   </details>
                 ) : (
@@ -85,8 +109,8 @@ async function ReportsOverview() {
                     </div>
                     <span className="text-xs text-muted-foreground">No analysis available</span>
                   </div>
-                ),
-              )}
+                );
+              })}
             </CardContent>
           </Card>
         ))

@@ -97,9 +97,9 @@ function ScoreSpectrum({ group }: { group: Group }) {
             style={{ bottom: `${threshold}%` }}
           />
           {bars.map(({ candidate, score }) => (
-            <div key={candidate.id} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+            <div key={candidate.id} className="flex h-full min-w-0 flex-1 flex-col items-center gap-1">
               <span className="text-xs font-medium tabular-nums">{score ? score.total.toFixed(1) : "–"}</span>
-              <div className="flex h-full w-full items-end">
+              <div className="flex w-full flex-1 items-end">
                 <div
                   className={cn(
                     "w-full rounded-t-md bg-gradient-to-t",
@@ -172,9 +172,15 @@ function GateDonut({
               return el;
             })}
         </svg>
-        <div className="absolute flex flex-col items-center">
-          <span className="text-2xl font-semibold">{pct}%</span>
-          <span className="text-[11px] text-muted-foreground">Strong match</span>
+        <div className="absolute flex flex-col items-center px-4 text-center">
+          {total > 0 ? (
+            <>
+              <span className="text-2xl font-semibold">{pct}%</span>
+              <span className="text-[11px] text-muted-foreground">Strong match</span>
+            </>
+          ) : (
+            <span className="text-xs text-muted-foreground">No scored candidates yet</span>
+          )}
         </div>
       </div>
       <ul className="mt-4 flex flex-col gap-1.5 text-xs">

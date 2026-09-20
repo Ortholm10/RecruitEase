@@ -358,6 +358,30 @@ export interface EvaluationReport {
   createdAt: string;
 }
 
+// ------------------------------------------------------------
+// Reports — AI job summary (recruiter-facing, on-demand). One LLM call per
+// job over every candidate's resume + interview evidence, built by
+// lib/report/summarizeJobCandidates.ts. Never stored — regenerated per click.
+// ------------------------------------------------------------
+
+export interface CandidateAiSummary {
+  candidateId: string;
+  name: string;
+  resumeScore: number | null;
+  aiScore: number; // 1-100, model's judgment
+  summary: string;
+  strengths: string[];
+  concerns: string[];
+  recommendation: ReportOutcome;
+}
+
+export interface JobAiSummary {
+  jobId: string;
+  jobTitle: string;
+  candidates: CandidateAiSummary[];
+  generatedAt: string;
+}
+
 /**
  * The candidate-facing artifact. HARD RULES for whatever generates this:
  *   1. Every claim must cite a stored Evidence item — no evidence, no sentence.
