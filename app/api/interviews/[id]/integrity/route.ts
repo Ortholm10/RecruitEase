@@ -4,8 +4,6 @@ import { ApiError, resolveInterviewAccess } from "@/lib/interview/access";
 import { buildIntegrityReport, describeEvent } from "@/lib/integrity";
 import type { IntegrityEventType } from "@/types";
 
-export const runtime = "nodejs";
-
 /** Browser-behavior sensors the candidate's browser can report live. All are
  *  Tier 1 integrity event types — the engine consumes them, never the
  *  candidate-facing report. Paste/tab/focus rows carry a risk weight the

@@ -30,8 +30,8 @@ export function IntegrityRecorder({
   useEffect(() => {
     if (!enabled || !interviewId) return;
 
-    const activeTurnId = turns.find((t) => t.answeredAt === null)?.id ?? null ??
-      turns[turns.length - 1]?.id ?? null;
+    const activeTurnId =
+      turns.find((t) => t.answeredAt === null)?.id ?? turns[turns.length - 1]?.id ?? null;
 
     const send = (type: IntegrityEventType, payload: Record<string, unknown> = {}) => {
       void fetch(`/api/interviews/${interviewId}/integrity`, {

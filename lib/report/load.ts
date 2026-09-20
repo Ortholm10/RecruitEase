@@ -1,6 +1,5 @@
 import { getCandidateWithScore } from "@/lib/candidates";
 import { getJobById } from "@/lib/jobs";
-import { getRequirementsForJob } from "@/lib/requirements";
 import { listTurns, findLatestInterviewForCandidate } from "@/lib/interview/queries";
 import { buildEvaluationReport } from "@/lib/report/buildReport";
 import type { EvaluationReport } from "@/types";
@@ -28,16 +27,13 @@ export async function loadEvaluationReport(opts: {
   if (interview.status !== "completed")
     throw new Error("Interview not complete", { cause: { code: "interview_pending" } });
 
-  const [requirements, turns] = await Promise.all([
-    getRequirementsForJob(opts.jobId),
-    listTurns(interview.id),
-  ]);
+  const turns = await listTurns(interview.id);
 
   const report = buildEvaluationReport({
     candidateId: opts.candidateId,
     jobId: opts.jobId,
     interviewId: interview.id,
-    requirements,
+    requirements: job.requirements,
     score: { breakdown: found.score?.breakdown ?? [] },
     plan: interview.plan,
     turns,
