@@ -313,6 +313,51 @@ export interface RecruiterReport {
   createdAt: string;
 }
 
+// ------------------------------------------------------------
+// Phase 5 — Evaluation Report (B8, "the money screen"). Rendered on the
+// candidate page from the resume Score + answered Interview turns. Built by
+// lib/report/buildReport.ts (pure logic) — this shape is the UI contract.
+// ------------------------------------------------------------
+
+/** Interview evidence for ONE requirement. `turns` are the answered turn
+ *  chain (parent gap-probe + its follow-ups) that targeted the requirement. */
+export interface InterviewEvidence {
+  probed: boolean; // a planned question for this requirement was answered
+  verdict: Verdict | null; // verdict of the primary answer; null if never answered
+  turns: Turn[];
+}
+
+/** Movement of a requirement across sources. */
+export type Movement = "up" | "down" | "held" | null;
+
+export interface RequirementEvaluationRow {
+  requirementId: string;
+  skill: string;
+  level: RequirementLevel;
+  mustHave: boolean;
+  weight: number;
+  resumeVerdict: Verdict;
+  resumeQuote: string | null;
+  resumeReasoning: string;
+  interview: InterviewEvidence;
+  movement: Movement;
+  movementLabel: string | null; // e.g. "Unproven -> Strong"
+  remainingGap: boolean; // not demonstrated strong after both sources
+  gapReason: string | null;
+}
+
+export interface EvaluationReport {
+  candidateId: string;
+  jobId: string;
+  interviewId: string;
+  rows: RequirementEvaluationRow[];
+  /** The subset of rows the recruiter still needs to resolve: everything that
+   *  is not &apos;strong&apos; after resume + interview evidence is combined. */
+  gaps: RequirementEvaluationRow[];
+  outcome: ReportOutcome;
+  createdAt: string;
+}
+
 /**
  * The candidate-facing artifact. HARD RULES for whatever generates this:
  *   1. Every claim must cite a stored Evidence item — no evidence, no sentence.

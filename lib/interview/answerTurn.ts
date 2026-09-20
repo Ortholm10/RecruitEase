@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { generateStructured } from "@/lib/ai/client";
 import { writeAudit } from "@/lib/audit";
 import { findCanary, stripCanary } from "@/lib/interview/canary";
+import { gradeAnswer } from "@/lib/interview/gradeTurn";
 import { answerClassificationLLMSchema } from "@/types/schemas";
 import { concretenessFollowUp, reconcileFollowUp } from "@/lib/interview/artifacts";
 import { ApiError, resolveInterviewAccess } from "@/lib/interview/access";
@@ -147,6 +148,15 @@ export async function answerTurn(opts: {
   // partial row — the answer endpoint then returns a clean retryable error.
   const { object, model } = await classifyAnswer(parent, transcript);
 
+  // Phase 5: grade on the same 4-point scale as resume scoring. Pure code
+  // derivation from the classifier's axes (see gradeTurn.ts) — the verdict is
+  // persisted on the turn so the Evaluation Report can show pre/post movement.
+  const verdict = gradeAnswer({
+    specificity: object.specificity,
+    consistency: object.consistency,
+    transcript,
+  });
+
   const nowIso = () => new Date().toISOString();
 
   const answerFields = {
@@ -154,6 +164,7 @@ export async function answerTurn(opts: {
     first_word_at: firstWordAt?.toISOString() ?? null,
     answered_at: answeredAt.toISOString(),
     transcript,
+    verdict,
     evidence_linked_requirement:
       req.followUpDepth > 0 ? req.promptServed : (parent.requirementId ?? null),
   };
