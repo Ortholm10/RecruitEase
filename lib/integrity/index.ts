@@ -157,8 +157,23 @@ export function styleShiftSignal(turns: Turn[]): IntegritySignal | null {
   };
 }
 
-/** Human-readable, non-accusatory description of one persisted event. */
+/** True when this event is the record of a lockdown termination. Marked in the
+ *  payload rather than by its own type, because integrity_events.type is a
+ *  fixed CHECK constraint. */
+export function isTerminationEvent(e: IntegrityEvent): boolean {
+  return e.payload?.terminated === true;
+}
+
+/** Human-readable description of one persisted event. Factual for every
+ *  ordinary signal; the lockdown termination is the one deliberate exception,
+ *  see the note on the gaze/termination signal in buildIntegrityReport. */
 export function describeEvent(e: IntegrityEvent): string {
+  if (isTerminationEvent(e)) {
+    return "The interview was terminated automatically: the candidate left the interview window again after being warned.";
+  }
+  if (e.payload?.warned === true) {
+    return "The candidate left the interview window and was shown a final warning.";
+  }
   switch (e.type) {
     case "canary_triggered":
       return "A hidden verification marker was quoted back in an answer.";
@@ -173,7 +188,7 @@ export function describeEvent(e: IntegrityEvent): string {
     case "latency_variance":
       return "A consistent response delay was measured across questions.";
     case "gaze_sweep":
-      return "";
+      return "The candidate's gaze moved away from the screen.";
     default:
       return e.type;
   }
@@ -181,6 +196,20 @@ export function describeEvent(e: IntegrityEvent): string {
 
 function eventCount(events: IntegrityEvent[], type: IntegrityEvent["type"]): number {
   return events.filter((e) => e.type === type).length;
+}
+
+/** Wall-clock span of the session in minutes, from whatever evidence exists.
+ *  Used to turn raw event counts into a density. */
+function interviewMinutes(turns: Turn[], events: IntegrityEvent[]): number {
+  const stamps = [
+    ...turns.flatMap((t) => [t.askedAt, t.answeredAt]),
+    ...events.map((e) => e.ts),
+  ]
+    .filter((s): s is string => Boolean(s))
+    .map((s) => new Date(s).getTime())
+    .filter((n) => !Number.isNaN(n));
+  if (stamps.length < 2) return 0;
+  return (Math.max(...stamps) - Math.min(...stamps)) / 60_000;
 }
 
 /** Aggregate everything into one recruiter-facing report. */
@@ -243,6 +272,42 @@ export function buildIntegrityReport(
       timestamp: firstOf("fullscreen_exit")!.ts,
       weight: "low",
       evidence: `Fullscreen was exited ${full} times.`,
+    });
+  }
+
+  // Lockdown termination. Deliberately the heaviest signal in the set: unlike
+  // every other reading here it is not a passive observation but a recorded
+  // enforcement action the candidate was warned about first.
+  const terminationEvent = events.find(isTerminationEvent);
+  if (terminationEvent) {
+    const reason = typeof terminationEvent.payload?.reason === "string" ? terminationEvent.payload.reason : "focus_loss";
+    const how =
+      reason === "fullscreen_exit"
+        ? "left fullscreen"
+        : reason === "tab_hidden"
+          ? "switched away from the interview tab"
+          : "moved focus out of the interview window";
+    signals.push({
+      type: "window_focus_loss",
+      timestamp: terminationEvent.ts,
+      weight: "high",
+      evidence: `Interview terminated automatically: the candidate ${how} a second time after being warned that doing so would end the interview.`,
+    });
+  }
+
+  // Tier 2 — webcam gaze. Looking away is ordinary human behaviour, so raw
+  // count alone says little; weight on how densely it happened over the
+  // interview's own span.
+  const gaze = eventCount(events, "gaze_sweep");
+  const gazeFirst = firstOf("gaze_sweep");
+  if (gazeFirst) {
+    const minutes = Math.max(1, interviewMinutes(turns, events));
+    const perMinute = gaze / minutes;
+    signals.push({
+      type: "gaze_sweep",
+      timestamp: gazeFirst.ts,
+      weight: gaze >= 6 && perMinute >= 2 ? "medium" : "low",
+      evidence: `Gaze moved away from the screen ${gaze} time${gaze === 1 ? "" : "s"} over ${minutes.toFixed(0)} minute${minutes < 1.5 ? "" : "s"} (${perMinute.toFixed(1)}/min).`,
     });
   }
 

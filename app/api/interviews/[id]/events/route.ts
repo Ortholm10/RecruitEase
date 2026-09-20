@@ -8,6 +8,7 @@ const VALID_EVENT_TYPES = new Set([
   "window_focus_loss",
   "fullscreen_exit",
   "paste_event",
+  "gaze_sweep",
 ] as const);
 
 /**

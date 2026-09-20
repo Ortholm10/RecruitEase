@@ -93,6 +93,41 @@ export async function findLatestInterviewForCandidate(
   return data ? mapInterview(data as InterviewRow) : null;
 }
 
+/** Batched version of findLatestInterviewForCandidate for a list of
+ *  candidates — one query instead of N concurrent Supabase clients (the
+ *  Reports page needs this per job group). */
+export async function listLatestInterviewsForCandidates(
+  candidateIds: string[],
+): Promise<Map<string, Interview>> {
+  const byCandidate = new Map<string, Interview>();
+  if (candidateIds.length === 0) return byCandidate;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("interviews")
+    .select(INTERVIEW_COLUMNS)
+    .in("candidate_id", candidateIds);
+  if (error) throw new Error(`Could not load interviews: ${error.message}`);
+
+  for (const row of (data ?? []) as InterviewRow[]) {
+    const interview = mapInterview(row);
+    const existing = byCandidate.get(interview.candidateId);
+    if (!existing) {
+      byCandidate.set(interview.candidateId, interview);
+      continue;
+    }
+    // Prefer the in-flight interview; between two completed ones, prefer
+    // the more recently completed (mirrors findLatestInterviewForCandidate).
+    const existingActive = existing.status !== "completed";
+    const currentActive = interview.status !== "completed";
+    if (existingActive) continue;
+    if (currentActive || (interview.completedAt ?? "") > (existing.completedAt ?? "")) {
+      byCandidate.set(interview.candidateId, interview);
+    }
+  }
+  return byCandidate;
+}
+
 export async function listTurns(interviewId: string): Promise<Turn[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
