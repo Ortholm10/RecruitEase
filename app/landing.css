@@ -1,0 +1,1169 @@
+/* ══ Fonts ═══════════════════════════════════════════════════════════
+ * General Sans is Fontshare; Onest and Playwrite US Trad are Google. */
+@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Onest:wght@400;500&family=Playwrite+US+Trad:wght@200&display=swap");
+
+/* ══ Reset ═══════════════════════════════════════════════════════════
+ * Only the parts the composition actually depends on. */
+.lk-stage *,
+.lk-stage *::before,
+.lk-stage *::after {
+  box-sizing: border-box;
+  border: 0 solid;
+}
+
+/* ══ Tokens ══════════════════════════════════════════════════════════
+ * Every number is a Figma measurement in CSS pixels at the 1920 design
+ * width. The RESPONSIVE block near the bottom only ever restates them. */
+:root {
+  --font-general: "General Sans", system-ui, sans-serif;
+  --font-onest: "Onest", system-ui, sans-serif;
+  --font-script: "Playwrite US Trad", "Snell Roundhand", "Segoe Script", cursive;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  /* The page ground — the Storm canvas fills this layer. */
+  --lk-asset: #000;
+
+  /* ── RecruitEase palette · dark theme ────────────────────────────
+   * Style: "Modern Dark" (glassmorphism, dark-primary) from
+   * ui-ux-pro-max; hues taken from the Storm scene itself so the UI and
+   * the asset are one system rather than two. */
+  --rx-plum: #1a0418;     /* scene bgColor — deepest ground           */
+  --rx-crimson: #6a0a2a;  /* scene coreColor — deep accent            */
+  --rx-magenta: #ff2d6b;  /* scene midColor — primary accent / CTA    */
+  --rx-gold: #ffd36b;     /* scene rimColor — highlight / emphasis    */
+  --rx-pink: #ff7ab0;     /* scene atmoColor — soft accent            */
+  --rx-ink: #fff;
+  --rx-ink-2: rgba(255, 255, 255, 0.72);
+  --rx-ink-3: rgba(255, 255, 255, 0.52);
+  --rx-line: rgba(255, 255, 255, 0.14);
+  --rx-panel: rgba(12, 2, 11, 0.42);
+
+  /* ── Nav — Figma "Frame 68" ─────────────────────────────────────── */
+  --nav-inset: 30px;        /* left/right offset from the canvas edge   */
+  --nav-top: 16px;
+  --nav-h: 62px;
+  --nav-r: 64px;
+  --nav-bg: rgba(255, 255, 255, 0.1);
+  --nav-blur: 8px;
+  --brand-x: 40px;          /* Frame 11 · x inside the bar             */
+  --brand-gap: 8px;
+  --brand-mark: 18px;
+  --links-gap: 64px;        /* Frame 62 · the one gap between links    */
+  --fs-nav: 24px;
+
+  /* Nav CTA — Figma "Frame 63" */
+  --navcta-w: 227px;
+  --navcta-h: 54px;
+  --navcta-inset: 4px;      /* 1860 − 1629 − 227 = 4, and top 4        */
+  --navcta-pl: 48px;
+  --navcta-pr: 3px;
+  --navcta-icon: 48px;
+
+  /* ── Hero — Figma "Frame 67" ────────────────────────────────────── */
+  --hero-w: 1020px;
+  --hero-gap: 72px;         /* headline block → CTA row                */
+  --head-gap: 16px;         /* line 1 → line 2                         */
+  --fs-h1a: 72px;           /* General Sans Regular                    */
+  --fs-h1b: 128px;          /* Playwrite XLight                        */
+
+  /* The ramp both headline lines are cut out of. */
+  --head-ramp: linear-gradient(to left, rgba(255, 255, 255, 0.3), #fff);
+  --head-bleed: 24px;       /* side air for the script face's flourishes */
+
+  /* CTA row — Figma "Frame 66" */
+  --cta-gap: 16px;
+  --btn-w: 260px;
+  --btn-h: 71px;
+  --btn-r: 64px;
+  --btn-px: 64px;           /* padding-left on the solid, both on ghost */
+  --btn-pr: 3px;
+  --btn-icon: 65px;
+  --fs-btn: 24px;
+
+  /* ── Scrolling sections (not in the Figma frame) ────────────────── */
+  --sec-w: 1180px;
+  --sec-py: 140px;
+  --sec-gap: 56px;
+  --card-r: 28px;
+  --card-p: 36px;
+  --fs-eyebrow: 14px;
+  --fs-h2: 56px;
+  --fs-h3: 24px;
+  --fs-body: 17px;
+  --fs-stat: 56px;
+}
+
+/* ══ Page shell ══════════════════════════════════════════════════════ */
+html {
+  background: var(--lk-asset);
+  /* Smooth scrolling for the in-page anchor jumps. */
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--lk-asset);
+  font-family: var(--font-onest), system-ui, sans-serif;
+  color: var(--rx-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* No overflow:hidden — unlike the single-view reference this page
+   * scrolls, and the scroll is what drives the Storm's camera dive. */
+}
+
+/* Full bleed. The Storm canvas is the ground; nothing here paints its own. */
+.lk-stage {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  color: #fff;
+}
+
+/* The reference's own clip. The headline boxes are grown past their column
+ * by --head-bleed and the hero scrim is inset negatively, so both spill
+ * sideways by design — without this they widen the document, and a fixed
+ * element then sizes to the overflow rather than the viewport. */
+.lk {
+  overflow: hidden;
+  color: #fff;
+}
+
+/* ══ Spotlight — the composition ═════════════════════════════════════ */
+
+/* The hero occupies exactly one screen; the rest of the page scrolls
+ * beneath it over the same fixed canvas. */
+.lk-spotlight {
+  position: relative;
+  height: 100svh;
+  min-height: 560px;
+}
+
+/* ── Nav bar · Figma "Frame 68" ─────────────────────────────────────
+ * 1860 × 62 at (30, 16). Fixed rather than absolute so it rides the
+ * scroll — the reference never scrolls, this page does. */
+.sp-nav {
+  position: fixed;
+  z-index: 30;
+  left: var(--nav-inset);
+  right: var(--nav-inset);
+  top: var(--nav-top);
+  height: var(--nav-h);
+}
+
+/* No bar — but the brand and links would sit straight on the plasma, which
+ * fills the screen once the scroll dives in. A full-bleed gradient off the
+ * top edge keeps them readable and reads as shading, not as a panel. */
+.sp-nav::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: calc(var(--nav-top) * 2 + var(--nav-h) + 48px);
+  background: linear-gradient(to bottom, rgba(6, 1, 6, 0.72), rgba(6, 1, 6, 0));
+  pointer-events: none;
+}
+
+/* Figma pins the brand and the link row at y19 in a 62-tall bar — dead
+ * centre, so they ride the middle rather than a hard offset. */
+.sp-brand,
+.sp-links {
+  position: absolute;
+  top: 50%;
+  display: flex;
+  align-items: center;
+}
+
+.sp-brand {
+  left: var(--brand-x);
+  transform: translateY(-50%);
+  gap: var(--brand-gap);
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--fs-nav);
+  line-height: 1;
+  color: #fff;
+  text-decoration: none;
+}
+
+.sp-mark {
+  width: var(--brand-mark);
+  height: var(--brand-mark);
+  flex: none;
+}
+
+.sp-links {
+  left: 50%;
+  transform: translate(-50%, -50%);
+  gap: var(--links-gap);
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--fs-nav);
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.sp-links a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The right-hand pair. One flex row, so both buttons share a baseline and a
+ * height instead of each being placed by hand at its own size. */
+.sp-nav-actions {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Secondary: a hairline pill. Same height and same face as the glass CTA
+ * beside it — only the weight and the fill separate them. */
+.sp-ghost-sm {
+  display: flex;
+  align-items: center;
+  height: var(--navcta-h);
+  padding: 0 var(--navcta-pl);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--fs-nav);
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.sp-ghost-sm:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.sp-ghost-sm:active {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sp-disc {
+  flex: none;
+  display: block;
+}
+
+/* ── Hero · Figma "Frame 67" ────────────────────────────────────────
+ * A 1020-wide column centred on the 1920 × 1080 canvas (its box centre
+ * sits at 540.5, hence the half-pixel). */
+.sp-hero {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: calc(50% + 0.5px);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: var(--hero-w);
+  max-width: calc(100% - 2 * var(--nav-inset));
+  gap: var(--hero-gap);
+}
+
+/* The scrim. Sits between the canvas and the hero column, scoped to the
+ * column, so the composition keeps the asset as its ground while the type
+ * stays legible against the brightest part of the orb. */
+.sp-hero::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -18% -14%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(6, 1, 6, 0.88) 0%,
+    rgba(6, 1, 6, 0.74) 42%,
+    rgba(6, 1, 6, 0.36) 66%,
+    transparent 80%
+  );
+  pointer-events: none;
+}
+
+.sp-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--head-gap);
+  width: 100%;
+  text-align: center;
+}
+
+/* Both lines are the same cut-out: a white ramp running right-to-left
+ * across the full 1020px text box, clipped to the glyphs.
+ *
+ * THE BOX HAS TO BE BIGGER THAN THE LINE. `background-clip: text` paints
+ * only inside the element's own box, so any ink the glyphs put OUTSIDE
+ * it gets no paint and simply disappears — at `line-height: 1` that is
+ * the descender of every "g", and on the script face a good deal more.
+ *
+ * So the box is grown in `em` — it scales with the type, one rule for
+ * every breakpoint — and pulled back by an equal negative margin, which
+ * leaves the flow geometry exactly as Figma draws it. */
+.sp-h1,
+.sp-h2 {
+  width: calc(100% + 2 * var(--head-bleed));
+  margin: -0.22em calc(-1 * var(--head-bleed)) -0.62em;
+  padding: 0.22em var(--head-bleed) 0.62em;
+  line-height: 1;
+  background-image: var(--head-ramp);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.sp-h1 {
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--fs-h1a);
+}
+
+/* At the design size the script line measures ~1019.7px inside a 1020px
+ * box. `nowrap` keeps it the single line Figma draws instead of letting
+ * a rounding difference break the last word onto a second one. The phone
+ * breakpoint hands wrapping back, where the measure is genuinely tight. */
+.sp-h2 {
+  font-family: var(--font-script), cursive;
+  font-weight: 200;
+  font-style: normal;
+  font-size: var(--fs-h1b);
+  white-space: nowrap;
+}
+
+/* The plain-terms subheading under the display pair. */
+.sp-sub {
+  max-width: 720px;
+  margin: 12px 0 0;
+  text-align: center;
+  font-family: var(--font-onest), system-ui, sans-serif;
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--rx-ink-2);
+}
+
+/* ── CTA row · Figma "Frame 66" ─────────────────────────────────── */
+.sp-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--cta-gap);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.sp-btn {
+  display: flex;
+  align-items: center;
+  width: var(--btn-w);
+  height: var(--btn-h);
+  border-radius: var(--btn-r);
+  font-family: var(--font-onest), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: var(--fs-btn);
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* Ghost — a 1px white hairline, label centred in the pill. */
+.sp-btn-ghost {
+  justify-content: center;
+  width: auto;
+  min-width: var(--btn-w);
+  padding: 3px var(--btn-px);
+  border: 1px solid #fff;
+  transition: background 180ms ease;
+}
+
+.sp-btn-ghost:hover { background: rgba(255, 255, 255, 0.12); }
+.sp-btn-ghost:active { background: rgba(255, 255, 255, 0.04); }
+
+/* ══ Liquid glass CTA ════════════════════════════════════════════════
+ * /liquid-glass.js owns the SVG-displacement backdrop; everything here
+ * is the dressing — tint, inner highlight, edge light and the sheen
+ * that travels across on hover. */
+.sp-glass {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--btn-r);
+  font-family: var(--font-onest), system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+  text-decoration: none;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.22),
+    rgba(255, 45, 107, 0.16) 45%,
+    rgba(255, 211, 107, 0.14)
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 18px 40px -12px rgba(255, 45, 107, 0.45),
+    0 2px 10px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 180ms ease;
+}
+
+/* Until the script reports support, a plain frosted backdrop stands in
+ * so the pill is never a flat unreadable rectangle. */
+.sp-glass:not([data-glass="true"]) {
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+}
+
+.sp-glass-lg {
+  width: auto;
+  min-width: var(--btn-w);
+  height: var(--btn-h);
+  gap: 16px;
+  padding-left: var(--btn-px);
+  padding-right: var(--btn-pr);
+  font-size: var(--fs-btn);
+}
+
+/* Nav CTA · Figma "Frame 63" — 227 × 54, 4px of air on the right and top.
+ * The label is flush to the 48px left pad and the disc flush to the 3px
+ * right pad, so the pair is spread rather than centred. It carries its own
+ * placement in the bar: it is the only small glass pill on the page, and a
+ * separate positioning class would just lose to `.sp-glass` again. */
+/* Primary: the only liquid glass in the nav. Figma's fixed 227 width was
+ * sized for "Let's talk" and made this pill read larger than everything
+ * around it, so it hugs its own label and matches the ghost's height. */
+.sp-glass-sm {
+  width: auto;
+  height: var(--navcta-h);
+  gap: 10px;
+  padding-left: var(--navcta-pl);
+  padding-right: var(--navcta-pr);
+  border-radius: 999px;
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: var(--fs-nav);
+}
+
+.sp-glass-label {
+  position: relative;
+  z-index: 2;
+}
+
+.sp-glass .sp-disc {
+  position: relative;
+  z-index: 2;
+}
+
+.sp-glass-lg .sp-disc { width: var(--btn-icon); height: var(--btn-icon); }
+.sp-glass-sm .sp-disc {
+  width: calc(var(--navcta-h) - 2 * var(--navcta-pr));
+  height: calc(var(--navcta-h) - 2 * var(--navcta-pr));
+}
+
+/* The travelling specular highlight. */
+.sp-glass-sheen {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  transition: transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+.sp-glass:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.26),
+    0 24px 52px -12px rgba(255, 45, 107, 0.6),
+    0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.sp-glass:hover .sp-glass-sheen {
+  transform: translateX(120%);
+}
+
+.sp-glass:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* ══ Scrolling sections ══════════════════════════════════════════════
+ * Everything below the hero. Each panel is translucent glass so the
+ * Storm keeps showing through — the asset is still the ground. */
+
+/* Scrolling drives the camera INTO the orb, so by the time the reader
+ * reaches the copy the plasma fills the whole viewport at full
+ * brightness and nothing sitting on it is readable. One veil, feathered
+ * out of the hero and running to the footer, sits between the canvas and
+ * the content: the asset still shows through everywhere, just held back
+ * far enough for body text to clear contrast. */
+.sp-flow {
+  position: relative;
+}
+
+.sp-flow::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(6, 1, 6, 0) 0,
+    rgba(6, 1, 6, 0.8) 240px,
+    rgba(6, 1, 6, 0.8) 100%
+  );
+}
+.sp-section {
+  position: relative;
+  z-index: 2;
+  width: min(var(--sec-w), calc(100% - 2 * var(--nav-inset)));
+  margin: 0 auto;
+  padding: var(--sec-py) 0;
+  /* Anchor jumps land below the fixed nav. */
+  scroll-margin-top: calc(var(--nav-top) + var(--nav-h) + 24px);
+}
+
+.sp-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 20px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-eyebrow);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rx-gold);
+}
+
+.sp-eyebrow::before {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+}
+
+.sp-h2-sec {
+  margin: 0 0 16px;
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--fs-h2);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.sp-lede {
+  max-width: 640px;
+  margin: 0 0 var(--sec-gap);
+  font-size: var(--fs-body);
+  line-height: 1.65;
+  color: var(--rx-ink-3);
+}
+
+/* The shared glass panel. */
+.sp-card {
+  position: relative;
+  overflow: hidden;
+  padding: var(--card-p);
+  border-radius: var(--card-r);
+  background: var(--rx-panel);
+  border: 1px solid var(--rx-line);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(20px) saturate(1.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 24px 60px -24px rgba(0, 0, 0, 0.7);
+  transition: border-color 220ms ease, transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sp-card:hover {
+  border-color: rgba(255, 122, 176, 0.45);
+  transform: translateY(-3px);
+}
+
+/* ── How it works · the 4-stage pipeline ─────────────────────────── */
+.sp-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.sp-step-n {
+  display: block;
+  margin-bottom: 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--rx-magenta);
+}
+
+.sp-card h3 {
+  margin: 0 0 12px;
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: var(--fs-h3);
+  line-height: 1.25;
+  color: #fff;
+}
+
+.sp-card p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--rx-ink-3);
+}
+
+/* The 4-point verdict scale, shown inside stage 2. */
+.sp-verdicts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.sp-verdict {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sp-verdict-strong { color: var(--rx-gold); }
+.sp-verdict-partial { color: var(--rx-pink); }
+.sp-verdict-unproven { color: rgba(255, 255, 255, 0.6); }
+.sp-verdict-absent { color: rgba(255, 255, 255, 0.34); }
+
+/* ── Features · 3 callouts ───────────────────────────────────────── */
+.sp-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.sp-feature-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 22px;
+  border-radius: 12px;
+  border: 1px solid var(--rx-line);
+  background: rgba(255, 45, 107, 0.12);
+  color: var(--rx-pink);
+}
+
+.sp-feature-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+/* ── Proof points ────────────────────────────────────────────────── */
+.sp-proof {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.sp-proof-n {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-weight: 500;
+  font-size: var(--fs-stat);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  background: linear-gradient(to bottom right, var(--rx-gold), var(--rx-magenta));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.sp-proof-note {
+  margin-top: var(--cta-gap);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* ── Closing CTA ─────────────────────────────────────────────────── */
+.sp-close {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 92px var(--card-p);
+  text-align: center;
+}
+
+.sp-close .sp-h2-sec,
+.sp-close .sp-lede {
+  margin-bottom: 0;
+  text-align: center;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.sp-footer {
+  position: relative;
+  z-index: 2;
+  width: min(var(--sec-w), calc(100% - 2 * var(--nav-inset)));
+  margin: 0 auto;
+  padding: 40px 0 56px;
+  border-top: 1px solid var(--rx-line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.sp-footer a {
+  color: var(--rx-ink-2);
+  text-decoration: none;
+  transition: color 180ms ease;
+}
+
+.sp-footer a:hover { color: var(--rx-gold); }
+
+.sp-footer-brand {
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-size: 20px;
+  color: #fff;
+}
+
+/* Interactive chrome — controls accept the pointer and answer with
+ * instant hover/press feedback. Everywhere else the media keeps it. */
+.sp-links a,
+.sp-brand,
+.sp-btn,
+.sp-glass {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sp-links a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
+/* Keyboard focus must stay visible — the reference has no focus styles
+ * because it is a static mock; this is a real page. */
+.lk-stage a:focus-visible {
+  outline: 2px solid var(--rx-gold);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+/* ══ RESPONSIVE ══════════════════════════════════════════════════════
+ * The composition is written once, above, against the 1920 design
+ * width. Every breakpoint below only RESTATES the tokens.
+ *
+ * The one ratio worth protecting is `--hero-w ÷ --fs-h1b`: at the design
+ * size that is 1020 ÷ 128 ≈ 8, which is what keeps the script line on a
+ * single line. Every step below stays at or above it. */
+
+@media (max-width: 1600px) {
+  :root {
+    --nav-h: 56px;
+    --brand-x: 32px;
+    --brand-mark: 16px;
+    --links-gap: 44px;
+    --fs-nav: 20px;
+    --navcta-w: 190px;
+    --navcta-h: 48px;
+    --navcta-pl: 40px;
+    --navcta-icon: 42px;
+
+    --hero-w: 860px;
+    --hero-gap: 58px;
+    --head-gap: 14px;
+    --fs-h1a: 58px;
+    --fs-h1b: 104px;
+
+    --btn-w: 220px;
+    --btn-h: 62px;
+    --btn-px: 52px;
+    --btn-icon: 56px;
+    --fs-btn: 20px;
+
+    --sec-py: 120px;
+    --fs-h2: 48px;
+    --fs-stat: 48px;
+  }
+}
+
+@media (max-width: 1280px) {
+  :root {
+    --nav-inset: 24px;
+    --nav-top: 14px;
+    --nav-h: 52px;
+    --brand-x: 26px;
+    --links-gap: 30px;
+    --fs-nav: 18px;
+    --navcta-w: 166px;
+    --navcta-h: 44px;
+    --navcta-pl: 30px;
+    --navcta-icon: 38px;
+
+    --hero-w: 720px;
+    --hero-gap: 48px;
+    --head-gap: 12px;
+    --fs-h1a: 48px;
+    --fs-h1b: 86px;
+
+    --btn-w: 196px;
+    --btn-h: 56px;
+    --btn-px: 44px;
+    --btn-icon: 50px;
+    --fs-btn: 18px;
+
+    --sec-py: 104px;
+    --sec-gap: 44px;
+    --card-p: 28px;
+    --fs-h2: 42px;
+    --fs-h3: 21px;
+    --fs-stat: 42px;
+  }
+
+  /* Four pipeline stages no longer read across a 1280 measure. */
+  .sp-steps { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --links-gap: 22px;
+    --fs-nav: 16px;
+    --navcta-w: 148px;
+    --navcta-h: 42px;
+    --navcta-pl: 24px;
+    --navcta-icon: 36px;
+
+    --hero-w: 620px;
+    --hero-gap: 40px;
+    --fs-h1a: 40px;
+    --fs-h1b: 70px;
+
+    --btn-w: 176px;
+    --btn-h: 52px;
+    --btn-px: 38px;
+    --btn-icon: 46px;
+    --fs-btn: 16px;
+
+    --sec-py: 88px;
+    --fs-h2: 36px;
+  }
+
+  .sp-features { grid-template-columns: 1fr; }
+  .sp-proof { grid-template-columns: 1fr; }
+}
+
+/* ── The phone bands ────────────────────────────────────────────────
+ * Below 760 the hero stops being a fixed 1020-wide column and becomes
+ * the screen minus its gutters, so the headline has whatever measure
+ * the phone is. The bands are cut close and each is sized from its OWN
+ * NARROWEST width, so the script line lands between 82% and 98% of the
+ * measure everywhere. The face runs 7.97 × its font-size wide.
+ *
+ * `--fs-h1a` keeps Figma's 72:128 relationship (0.5625) at every step,
+ * so the two lines never drift apart. */
+
+@media (max-width: 760px) {
+  :root {
+    --nav-inset: 16px;
+    --nav-top: 12px;
+    --nav-h: 48px;
+    --nav-r: 48px;
+    --brand-x: 20px;
+    --brand-mark: 15px;
+    --fs-nav: 16px;
+    --navcta-w: 132px;
+    --navcta-h: 40px;
+    --navcta-pl: 20px;
+    --navcta-icon: 34px;
+
+    --head-bleed: 12px;
+    --hero-w: 100%;
+    --hero-gap: 36px;
+    --head-gap: 10px;
+    --fs-h1a: 45px;
+    --fs-h1b: 80px;
+
+    --cta-gap: 14px;
+    --btn-w: 220px;
+    --btn-h: 60px;
+    --btn-r: 48px;
+    --btn-px: 48px;
+    --btn-icon: 54px;
+    --fs-btn: 19px;
+
+    --sec-py: 72px;
+    --sec-gap: 32px;
+    --card-r: 22px;
+    --card-p: 24px;
+    --fs-h2: 32px;
+    --fs-stat: 40px;
+  }
+
+  /* Five links cannot share the bar with the brand and the CTA at a
+   * size anyone can read — the bar keeps the two that matter. */
+  .sp-links { display: none; }
+
+  /* The measure is real now, so the line may break rather than run off
+   * the screen. */
+  .sp-h2 { white-space: normal; }
+
+  .sp-steps { grid-template-columns: 1fr; }
+  .sp-close { padding: 64px 24px; }
+}
+
+@media (max-width: 680px) {
+  :root {
+    --hero-gap: 32px;
+    --head-gap: 9px;
+    --fs-h1a: 39px;
+    --fs-h1b: 70px;
+
+    --btn-w: 210px;
+    --btn-h: 58px;
+    --btn-px: 46px;
+    --btn-icon: 52px;
+    --fs-btn: 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Brand + two pills stop fitting; the primary CTA keeps the row. */
+  .sp-ghost-sm { display: none; }
+
+  :root {
+    --hero-gap: 27px;
+    --head-gap: 8px;
+    --fs-h1a: 34px;
+    --fs-h1b: 60px;
+
+    --cta-gap: 12px;
+    --btn-w: 195px;
+    --btn-h: 56px;
+    --btn-px: 42px;
+    --btn-icon: 50px;
+    --fs-btn: 17px;
+  }
+}
+
+@media (max-width: 520px) {
+  :root {
+    --nav-h: 44px;
+    --brand-x: 16px;
+    --fs-nav: 15px;
+    --navcta-w: 118px;
+    --navcta-h: 38px;
+    --navcta-pl: 16px;
+    --navcta-icon: 32px;
+
+    --hero-gap: 22px;
+    --head-gap: 6px;
+    --fs-h1a: 28px;
+    --fs-h1b: 50px;
+
+    --btn-w: 180px;
+    --btn-h: 52px;
+    --btn-px: 38px;
+    --btn-icon: 46px;
+    --fs-btn: 16px;
+
+    --fs-h2: 28px;
+  }
+}
+
+@media (max-width: 440px) {
+  :root {
+    --hero-gap: 20px;
+    --head-gap: 5px;
+    --fs-h1a: 24px;
+    --fs-h1b: 43px;
+
+    --btn-w: 162px;
+    --btn-h: 50px;
+    --btn-px: 34px;
+    --btn-icon: 44px;
+    --fs-btn: 15px;
+  }
+}
+
+@media (max-width: 380px) {
+  :root {
+    --navcta-w: 108px;
+    --navcta-pl: 14px;
+    --navcta-icon: 30px;
+
+    --hero-gap: 18px;
+    --fs-h1a: 21px;
+    --fs-h1b: 38px;
+
+    --cta-gap: 10px;
+    --btn-w: 144px;
+    --btn-h: 48px;
+    --btn-px: 30px;
+    --btn-icon: 42px;
+    --fs-btn: 14px;
+  }
+}
+
+/* The floor — 320px and the odd narrower window. */
+@media (max-width: 340px) {
+  :root {
+    --hero-gap: 16px;
+    --head-gap: 4px;
+    --fs-h1a: 19px;
+    --fs-h1b: 33px;
+
+    --btn-w: 126px;
+    --btn-h: 44px;
+    --btn-px: 24px;
+    --btn-icon: 38px;
+    --fs-btn: 13px;
+  }
+}
+
+/* ── Short windows ──────────────────────────────────────────────────
+ * Width is the usual binding axis, but a shallow viewport can run the
+ * centred hero up into the nav bar. Each guard restates a token set the
+ * width scale already defines, gated on the width band it belongs to,
+ * so a short window can only ever step the composition DOWN. */
+
+@media (max-height: 700px) and (min-width: 1281px) {
+  :root {
+    --nav-h: 56px;
+    --brand-x: 32px;
+    --brand-mark: 16px;
+    --links-gap: 44px;
+    --fs-nav: 20px;
+    --navcta-w: 190px;
+    --navcta-h: 48px;
+    --navcta-pl: 40px;
+    --navcta-icon: 42px;
+
+    --hero-w: 860px;
+    --hero-gap: 58px;
+    --head-gap: 14px;
+    --fs-h1a: 58px;
+    --fs-h1b: 104px;
+
+    --btn-w: 220px;
+    --btn-h: 62px;
+    --btn-px: 52px;
+    --btn-icon: 56px;
+    --fs-btn: 20px;
+  }
+}
+
+@media (max-height: 560px) and (min-width: 1025px) {
+  :root {
+    --nav-h: 52px;
+    --brand-x: 26px;
+    --links-gap: 30px;
+    --fs-nav: 18px;
+    --navcta-w: 166px;
+    --navcta-h: 44px;
+    --navcta-pl: 30px;
+    --navcta-icon: 38px;
+
+    --hero-w: 720px;
+    --hero-gap: 48px;
+    --head-gap: 12px;
+    --fs-h1a: 48px;
+    --fs-h1b: 86px;
+
+    --btn-w: 196px;
+    --btn-h: 56px;
+    --btn-px: 44px;
+    --btn-icon: 50px;
+    --fs-btn: 18px;
+  }
+}
+
+@media (max-height: 460px) and (min-width: 761px) {
+  :root {
+    --links-gap: 22px;
+    --fs-nav: 16px;
+    --navcta-w: 148px;
+    --navcta-h: 42px;
+    --navcta-pl: 24px;
+    --navcta-icon: 36px;
+
+    --hero-w: 620px;
+    --hero-gap: 40px;
+    --fs-h1a: 40px;
+    --fs-h1b: 70px;
+
+    --btn-w: 176px;
+    --btn-h: 52px;
+    --btn-px: 38px;
+    --btn-icon: 46px;
+    --fs-btn: 16px;
+  }
+}
+
+@media (max-height: 360px) and (min-width: 521px) {
+  :root {
+    --nav-h: 44px;
+    --fs-nav: 15px;
+    --navcta-w: 118px;
+    --navcta-h: 38px;
+    --navcta-pl: 16px;
+    --navcta-icon: 32px;
+
+    --hero-w: 620px;
+    --hero-gap: 26px;
+    --head-gap: 8px;
+    --fs-h1a: 26px;
+    --fs-h1b: 40px;
+
+    --btn-w: 148px;
+    --btn-h: 44px;
+    --btn-px: 24px;
+    --btn-icon: 38px;
+    --fs-btn: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .sp-glass-sheen,
+  .sp-card,
+  .sp-glass { transition: none; }
+}
