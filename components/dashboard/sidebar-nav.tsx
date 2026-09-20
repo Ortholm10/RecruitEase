@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, Users, BarChart3 } from "lucide-react";
+import { LayoutGrid, Briefcase, Users, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Jobs", icon: Briefcase },
+  { href: "/dashboard", label: "Overview", icon: LayoutGrid },
+  { href: "/dashboard/jobs", label: "Jobs", icon: Briefcase },
   { href: "/dashboard/candidates", label: "Candidates", icon: Users },
   { href: "/dashboard/reports", label: "Reports", icon: BarChart3 },
 ];
@@ -18,9 +19,7 @@ export function SidebarNav() {
     <nav className="flex flex-col gap-1" aria-label="Dashboard navigation">
       {NAV_ITEMS.map((item) => {
         const isActive =
-          item.href === "/dashboard"
-            ? pathname === "/dashboard" || pathname.startsWith("/dashboard/jobs")
-            : pathname.startsWith(item.href);
+          item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
         const Icon = item.icon;
 
         return (

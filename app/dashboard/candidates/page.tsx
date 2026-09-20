@@ -25,8 +25,8 @@ async function CandidatesOverview() {
           icon={Users}
           title="No candidates yet"
           description="Upload resumes on a job page to start screening."
-          actionHref="/dashboard"
-          actionLabel="Go to jobs"
+          actionHref="/dashboard/jobs/new"
+          actionLabel="Create a job"
         />
       ) : (
         grouped.map(({ job, candidates }) => (

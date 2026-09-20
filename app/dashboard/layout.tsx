@@ -16,7 +16,7 @@ async function DashboardChrome({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dark recruiter-theme min-h-screen bg-background text-foreground">
       <header className="flex h-16 items-center justify-between border-b px-6">
         <Link href="/dashboard" className="font-semibold">
           RecruitEase
