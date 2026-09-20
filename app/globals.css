@@ -126,6 +126,39 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.dark.recruiter-theme {
+  /* Recruiter dashboard: always-dark analytics theme, independent of the
+     site-wide light/dark toggle. Cyan-to-violet accent scale for charts. */
+  --background: #0a0e1a;
+  --foreground: #e7ecf5;
+  --card: #12172a;
+  --card-foreground: #e7ecf5;
+  --popover: #12172a;
+  --popover-foreground: #e7ecf5;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #1a2036;
+  --secondary-foreground: #cbd5e1;
+  --muted: #171c2e;
+  --muted-foreground: #8b93a7;
+  --accent: #1c2338;
+  --accent-foreground: #e7ecf5;
+  --destructive: #ef4444;
+  --ring: #6366f1;
+  --chart-1: #22d3ee;
+  --chart-2: #38bdf8;
+  --chart-3: #818cf8;
+  --chart-4: #a78bfa;
+  --chart-5: #f43f5e;
+  --sidebar: #0a0e1a;
+  --sidebar-foreground: #aab2c5;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: oklch(1 0 0 / 6%);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-ring: #6366f1;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
